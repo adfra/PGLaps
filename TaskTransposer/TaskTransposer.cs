@@ -52,7 +52,7 @@ public partial class Program
                 lon = newStartLon,
                 altSmoothed = oldStart.altSmoothed
             },
-            type = task.turnpoints[0].type
+            type = task.turnpoints[0].type //This is Ok as this should be SSS here. 
         });
 
         // Calculate the rotation angle
@@ -76,9 +76,7 @@ public partial class Program
             // Calculate new position
             var (newLat, newLon) = CalculateDestination(newPrev.lat, newPrev.lon, newBearing, distance);
 
-            var type = task.turnpoints[i].type;
-
-            newTurnpoints.Add(new Turnpoint
+            var newTurnpoint = new Turnpoint
             {
                 radius = task.turnpoints[i].radius,
                 waypoint = new Waypoint
@@ -88,9 +86,15 @@ public partial class Program
                     lat = newLat,
                     lon = newLon,
                     altSmoothed = oldCurrent.altSmoothed
-                },
-                type = task.turnpoints[i].type
-            });
+                }
+            };
+
+            if (task.turnpoints[i].type != null) //Omit if not SSS or ESS
+            {
+                newTurnpoint.type = task.turnpoints[i].type;
+            }
+
+            newTurnpoints.Add(newTurnpoint);
         }
 
         return new PGTask
@@ -175,21 +179,21 @@ public partial class Program
     public static void Main(string[] args)
     {
         
-        Console.Write("Please specify the output format for the task: 'xctsk', 'cup' or 'both' (Default: 'cup'");
+        Console.Write("Please specify the output format for the task - 'xctsk', 'cup' or 'both' (Default: 'both'):");
         string outputFormat = Console.ReadLine();
-        if (outputFormat == "") outputFormat = "cup";
+        if (outputFormat == "") outputFormat = "both";
 
         if (outputFormat != "xctsk" && outputFormat != "cup" && outputFormat != "both")
         {
-            Console.WriteLine("Unknown format requested. Please use either 'xctsk' or 'cup'. DEFAULTING TO CUP");
-            outputFormat = "cup";
+            Console.WriteLine("Unknown format requested. Please use either 'xctsk', 'cup'or 'both'. DEFAULTING TO BOTH");
+            outputFormat = "both";
         }
 
         // Read the input task file
         Console.Write("Please enter task filename (.xctsk): ");
         string taskFilename = Console.ReadLine();
-        if(taskFilename == "") taskFilename = "PGLap_MiniTask_v1.xctsk"; //Default task file (for testing
-        if (!File.Exists(taskFilename))
+        if(taskFilename == "") taskFilename = "PGLap_MiniTask_v1.xctsk"; //Default task file for testing
+        if (taskFilename == "" || !File.Exists(taskFilename))
         {
             Console.WriteLine("Task file not found.");
             return;
@@ -202,7 +206,7 @@ public partial class Program
         Console.Write("Please enter airspace filename (.txt): ");
         string airspaceFilename = Console.ReadLine();
         if(airspaceFilename == "") airspaceFilename = "PGLap_MiniTask_v1_Airspace.txt"; //Default airspace file (for testing)
-        if (!File.Exists(airspaceFilename))
+        if (airspaceFilename == "" || !File.Exists(airspaceFilename))
         {
             Console.WriteLine("Airspace file not found.");
             return;
@@ -247,13 +251,13 @@ public partial class Program
         // Write the output files
         string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmm");
 
-        if (outputFormat == "xctsk")
+        if (outputFormat == "xctsk" || outputFormat == "both")
         {
             string outputFilename = $"TransformedTask_{timestamp}.xctsk";
             File.WriteAllText(outputFilename, JsonConvert.SerializeObject(transformedTask, Formatting.Indented));
             Console.WriteLine($"Tasks transformed and saved to {outputFilename}");
         }
-        else if (outputFormat == "cup")
+        if (outputFormat == "cup" || outputFormat == "both")
         {
             string outputFilename = $"TransformedTask_{timestamp}.cup";
             File.WriteAllText(outputFilename, ConvertToCup(transformedTask));
