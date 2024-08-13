@@ -99,8 +99,10 @@ namespace PGLaps
             var tp = new Turnpoint();
             var wp = new Waypoint();
 
+            int fixedTPRadius = 100; //TODO: FIXED VALUE, Should be flexible.
+
             //Add the start.
-            tp.radius = 10; //TODO: FIXED VALUE, Should be flexible.
+            tp.radius = fixedTPRadius; //TODO: FIXED VALUE, Should be flexible.
             tp.type = "SSS";
 
             wp.name = $"WP00";
@@ -140,7 +142,7 @@ namespace PGLaps
             tp = new Turnpoint();
             wp = new Waypoint();
 
-            tp.radius = 10; //TODO: FIXED VALUE, Should be flexible.
+            tp.radius = fixedTPRadius; //TODO: FIXED VALUE, Should be flexible.
             tp.type = "ESS";
 
             wp.name = $"WP{wpNextID.ToString("D2")}";
