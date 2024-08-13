@@ -120,11 +120,39 @@ namespace PGLaps
         public Leg LegB { get; private set; }
         public double DegreesInside { get; private set; }
         public double DegreesOutside { get { return 360 - DegreesInside; } }
+
+        public double DegreeChange { get; private set; }
+        public string TurnDirection { get; private set; }
+
         public Angle(Leg legA, Leg legB)
         {
-            this.LegA = legA;
-            this.LegB = legB;
+            this.LegA = legA; //Incoming leg
+            this.LegB = legB; //Outgoing leg
             this.DegreesInside = CalculateInsideAngle(LegA.Bearing, LegB.Bearing);
+            this.DegreeChange = CalculateDegreeChange(LegA.Bearing, LegB.Bearing);
+            this.TurnDirection = DegreeChange < 0 ? "left" : "right";
+        }
+
+        private double CalculateDegreeChange(double bearing1, double bearing2)
+        {
+            // Normalize bearings to be between 0 and 360 degrees
+            bearing1 = NormalizeBearing(bearing1);
+            bearing2 = NormalizeBearing(bearing2);
+
+            // Calculate the difference between bearings
+            double difference = bearing2 - bearing1;
+
+            // Normalize the difference to be between -180 and 180 degrees
+            if (difference > 180)
+            {
+                difference -= 360;
+            }
+            else if (difference < -180)
+            {
+                difference += 360;
+            }
+
+            return difference;
         }
 
         public static double CalculateInsideAngle(double bearing1, double bearing2)
@@ -147,7 +175,7 @@ namespace PGLaps
         }
 
 
-        public Coordinate GetWaypointCoordinate(double waypointRadiusInMeters)
+        public Coordinate GetWaypointCoordinate(double waypointRadius)
         {
             //Check that the legs are connected
             if (LegA.End != LegB.Start)
@@ -158,23 +186,23 @@ namespace PGLaps
             //Calculate the waypoint coordinate based on the angle between two legs
             var halfOutsideAngle = this.DegreesOutside / 2;
             var reverseLegABearing = NormalizeBearing(LegA.Bearing + 180);
-            var bearing = NormalizeBearing(reverseLegABearing + halfOutsideAngle);
-            var waypoint = LegA.NextPoint(waypointRadiusInMeters, bearing);
+            var bearing = NormalizeBearing(reverseLegABearing + (TurnDirection == "left" ? -1 : 1) * halfOutsideAngle); //Turn angle is negative for left turns
+            var waypoint = LegA.NextPoint(waypointRadius, bearing);
             return waypoint;
         }
     }
 
-    public class DistanceBearingWPRadius
+    public class DistanceAngleWPRadius
     {
         public double Distance { get; set; }
-        public double Bearing { get; set; }
+        public double TurnAngle { get; set; }
         public double WaypointRadius { get; set; }
 
-        public DistanceBearingWPRadius(double distance, double bearing, double wpsize)
+        public DistanceAngleWPRadius(double distance, double turnAngle, double wpRadiusInMeters)
         {
             Distance = distance;
-            Bearing = bearing;
-            WaypointRadius = wpsize;
+            TurnAngle = turnAngle;
+            WaypointRadius = wpRadiusInMeters;
         }
     }
 }

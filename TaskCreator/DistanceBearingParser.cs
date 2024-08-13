@@ -5,7 +5,7 @@ namespace PGLaps
     public class DistanceBearingParser
     {
 
-        public List<DistanceBearingWPRadius> Parse(string input)
+        public List<DistanceAngleWPRadius> Parse(string input)
         {
             if (string.IsNullOrWhiteSpace(input))
             {
@@ -14,7 +14,7 @@ namespace PGLaps
 
             return input.Split('|')
                 .Select(triplet => triplet.Trim().Split(','))
-                .Select(values => new DistanceBearingWPRadius(
+                .Select(values => new DistanceAngleWPRadius(
                     ParseDouble(values[0]),
                     ParseDouble(values[1]),
                     ParseDouble(values[2])

@@ -7,7 +7,7 @@ namespace PGLaps
     {
         public Coordinate Start { get; set; }
         public bool CloseLoop { get; set; }
-        private List<DistanceBearingWPRadius> listOfDistBearWPRadius;
+        private List<DistanceAngleWPRadius> listOfDistBearWPRadius;
 
         public TaskBuilder(Coordinate start, String csvOfDistancesAndAngleDegrees, bool closeLoop)
         {
@@ -35,21 +35,22 @@ namespace PGLaps
             optimizedPoints.Add(Start);
             var lastWP = Start;
 
-            Coordinate nextWP = new Coordinate();
             for (int i = 0; i < listOfDistBearWPRadius.Count; i++)
             {
                 double absBearing;
 
                 if(i == 0)
                 {
-                    absBearing = listOfDistBearWPRadius[i].Bearing;
+                    absBearing = listOfDistBearWPRadius[i].TurnAngle;
                 }
                 else
                 {
                     var lastBearing = new Leg(optimizedPoints[i-1], optimizedPoints[i]).Bearing;
-                    absBearing = Angle.NormalizeBearing(lastBearing + listOfDistBearWPRadius[i].Bearing);
+                    //absBearing = Angle.NormalizeBearing(lastBearing + listOfDistBearWPRadius[i].TurnAngle);
+                    absBearing = lastBearing + listOfDistBearWPRadius[i].TurnAngle;
+                    absBearing = Angle.NormalizeBearing(absBearing);
                 }
-                nextWP = new Coordinate(optimizedPoints[i].Latitude.DecimalDegree, optimizedPoints[i].Longitude.DecimalDegree);
+                var nextWP = new Coordinate(optimizedPoints[i].Latitude.DecimalDegree, optimizedPoints[i].Longitude.DecimalDegree);
                 nextWP.Move(listOfDistBearWPRadius[i].Distance, absBearing, Shape.Ellipsoid);
                 
                 optimizedPoints.Add(nextWP);
@@ -59,8 +60,8 @@ namespace PGLaps
             if (CloseLoop)
             {
                 optimizedPoints.Add(Start);
-                var closingLeg = new Leg(nextWP, Start);
-                var distBearRadius = new DistanceBearingWPRadius(closingLeg.Distance.Meters, closingLeg.Bearing, 100); //TODO remove fixed WP size for goal.
+                var closingLeg = new Leg(lastWP, Start);
+                var distBearRadius = new DistanceAngleWPRadius(closingLeg.Distance.Meters, closingLeg.Bearing, 100); //TODO remove fixed WP size for goal.
                 listOfDistBearWPRadius.Add(distBearRadius);
             }
 
@@ -125,7 +126,7 @@ namespace PGLaps
                 wp.description = wp.name;
                 wp.altSmoothed = 0;
 
-                var wpCoord = angles[i].GetWaypointCoordinate(listOfDistBearWPRadius[i].WaypointRadius);
+                var wpCoord = angles[i].GetWaypointCoordinate(tp.radius);
                 wp.lat = wpCoord.Latitude.DecimalDegree;
                 wp.lon = wpCoord.Longitude.DecimalDegree;
             
