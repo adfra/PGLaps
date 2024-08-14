@@ -89,7 +89,7 @@ public partial class Program
                 }
             };
 
-            if (task.turnpoints[i].type != null) //Omit if not SSS or ESS
+            if (task.turnpoints[i].type != null && task.turnpoints[i].type != "") //Omit if not SSS or ESS
             {
                 newTurnpoint.type = task.turnpoints[i].type;
             }
@@ -254,7 +254,14 @@ public partial class Program
         if (outputFormat == "xctsk" || outputFormat == "both")
         {
             string outputFilename = $"TransformedTask_{timestamp}.xctsk";
-            File.WriteAllText(outputFilename, JsonConvert.SerializeObject(transformedTask, Formatting.Indented));
+
+            var settings = new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                NullValueHandling = NullValueHandling.Ignore
+            };
+
+            File.WriteAllText(outputFilename, JsonConvert.SerializeObject(transformedTask, Formatting.Indented, settings));
             Console.WriteLine($"Tasks transformed and saved to {outputFilename}");
         }
         if (outputFormat == "cup" || outputFormat == "both")
