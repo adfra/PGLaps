@@ -29,7 +29,7 @@ namespace PGLaps
 
         public SSS()
         {
-            type = string.Empty;
+            type = "SSS";
             direction = string.Empty;
             timeGates = new List<string>();
         }
@@ -54,7 +54,6 @@ namespace PGLaps
         public Turnpoint()
         {
             waypoint = new Waypoint();
-            type = string.Empty;
         }
     }
 
@@ -65,12 +64,12 @@ namespace PGLaps
         public double lat { get; set; }
         public double lon { get; set; }
         public int altSmoothed { get; set; }
-        public Coordinate coordinate { get; set; }
+        //public Coordinate coordinate { get; set; }
         public Waypoint()
         {
             name = string.Empty;
             description = string.Empty;
-            coordinate = new Coordinate();
+            //coordinate = new Coordinate();
         }
     }
 
