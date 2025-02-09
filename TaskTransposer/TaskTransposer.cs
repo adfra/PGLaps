@@ -8,6 +8,106 @@ using PGLaps;
 
 public partial class Program
 {
+    public static void Main(string[] args)
+    {
+
+        Console.Write("Please specify the output format for the task - 'xctsk', 'cup' or 'both' (Default: 'both'):");
+        string outputFormat = Console.ReadLine();
+        if (outputFormat == "") outputFormat = "both";
+
+        if (outputFormat != "xctsk" && outputFormat != "cup" && outputFormat != "both")
+        {
+            Console.WriteLine("Unknown format requested. Please use either 'xctsk', 'cup'or 'both'. DEFAULTING TO BOTH");
+            outputFormat = "both";
+        }
+
+        // Read the input task file
+        Console.Write("Please enter task filename (.xctsk): ");
+        string taskFilename = Console.ReadLine();
+        if (taskFilename == "") taskFilename = "PGLap_MiniTask_v1.xctsk"; //Default task file for testing
+        if (taskFilename == "" || !File.Exists(taskFilename))
+        {
+            Console.WriteLine("Task file not found.");
+            return;
+        }
+
+        var inputJson = File.ReadAllText(taskFilename);
+        var inputTask = JsonConvert.DeserializeObject<PGTask>(inputJson);
+
+        // Read the input airspace file
+        Console.Write("Please enter airspace filename (.txt): ");
+        string airspaceFilename = Console.ReadLine();
+        if (airspaceFilename == "") airspaceFilename = "PGLap_MiniTask_v1_Airspace.txt"; //Default airspace file (for testing)
+        if (airspaceFilename == "" || !File.Exists(airspaceFilename))
+        {
+            Console.WriteLine("Airspace file not found.");
+            return;
+        }
+
+        var airspacesTemplate = ParseOpenAir(airspaceFilename);
+
+        Console.Write("Please enter lat, long for the new starting location from Google Maps (nn.nnnnn, m.mmmmm):");
+        string newStartCoordString = Console.ReadLine();
+        if (newStartCoordString == "") newStartCoordString = "47.41718775277045, 8.628740563731998"; //Default start location (for testing)
+        if (TryParseWaypoint(newStartCoordString, out double newStartLat, out double newStartLon, out Coordinate newStart))
+        {
+            Console.WriteLine($"Valid waypoint: lat = {newStartLat}, long = {newStartLon}");
+        }
+        else
+        {
+            Console.WriteLine("Invalid waypoint format.");
+            return;
+        }
+
+        Console.Write("Please enter new departure direction in degrees: ");
+        if (!double.TryParse(Console.ReadLine(), out double newDepartureDegrees))
+        {
+            Console.WriteLine("Invalid departure degrees. Please enter a valid number.");
+            return;
+        }
+
+        // Transform the task
+        var transformedTask = TransformTask(inputTask, newStartLat, newStartLon, newDepartureDegrees);
+
+        // Transform the airspaces
+        var tmplStartLat = inputTask.turnpoints[0].waypoint.lat;
+        var tmplStartLon = inputTask.turnpoints[0].waypoint.lon;
+        Coordinate tmplStart = new Coordinate(tmplStartLat, tmplStartLon);
+        Coordinate tmplWP1 = new Coordinate(inputTask.turnpoints[1].waypoint.lat, inputTask.turnpoints[1].waypoint.lon);
+        var tmplFirstLeg = new Distance(tmplStart, tmplWP1);
+        var rotationAngle = (newDepartureDegrees - tmplFirstLeg.Bearing + 360) % 360;
+
+
+        var transformedAirspaces = TransformAirspaces(airspacesTemplate, tmplStart, newStart, rotationAngle);
+
+        // Write the output files
+        string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmm");
+
+        if (outputFormat == "xctsk" || outputFormat == "both")
+        {
+            string outputFilename = $"TransformedTask_{timestamp}.xctsk";
+
+            var settings = new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                NullValueHandling = NullValueHandling.Ignore
+            };
+
+            File.WriteAllText(outputFilename, JsonConvert.SerializeObject(transformedTask, Formatting.Indented, settings));
+            Console.WriteLine($"Tasks transformed and saved to {outputFilename}");
+        }
+        if (outputFormat == "cup" || outputFormat == "both")
+        {
+            string outputFilename = $"TransformedTask_{timestamp}.cup";
+            File.WriteAllText(outputFilename, ConvertToCup(transformedTask));
+            Console.WriteLine($"Tasks transformed and saved to {outputFilename}");
+        }
+
+        // Write the transformed airspaces
+        string airspaceOutputFilename = $"TransformedAirspaces_{timestamp}.txt";
+        WriteOpenAir(transformedAirspaces, airspaceOutputFilename);
+        Console.WriteLine($"Airspaces transformed and saved to {airspaceOutputFilename}");
+    }
 
     private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
     {
@@ -176,106 +276,7 @@ public partial class Program
         return false;        
     }
 
-    public static void Main(string[] args)
-    {
-        
-        Console.Write("Please specify the output format for the task - 'xctsk', 'cup' or 'both' (Default: 'both'):");
-        string outputFormat = Console.ReadLine();
-        if (outputFormat == "") outputFormat = "both";
-
-        if (outputFormat != "xctsk" && outputFormat != "cup" && outputFormat != "both")
-        {
-            Console.WriteLine("Unknown format requested. Please use either 'xctsk', 'cup'or 'both'. DEFAULTING TO BOTH");
-            outputFormat = "both";
-        }
-
-        // Read the input task file
-        Console.Write("Please enter task filename (.xctsk): ");
-        string taskFilename = Console.ReadLine();
-        if(taskFilename == "") taskFilename = "PGLap_MiniTask_v1.xctsk"; //Default task file for testing
-        if (taskFilename == "" || !File.Exists(taskFilename))
-        {
-            Console.WriteLine("Task file not found.");
-            return;
-        }
-
-        var inputJson = File.ReadAllText(taskFilename);
-        var inputTask = JsonConvert.DeserializeObject<PGTask>(inputJson);
-
-        // Read the input airspace file
-        Console.Write("Please enter airspace filename (.txt): ");
-        string airspaceFilename = Console.ReadLine();
-        if(airspaceFilename == "") airspaceFilename = "PGLap_MiniTask_v1_Airspace.txt"; //Default airspace file (for testing)
-        if (airspaceFilename == "" || !File.Exists(airspaceFilename))
-        {
-            Console.WriteLine("Airspace file not found.");
-            return;
-        }
-
-        var airspacesTemplate = ParseOpenAir(airspaceFilename);
-
-        Console.Write("Please enter lat, long for the new starting location from Google Maps (nn.nnnnn, m.mmmmm):");
-        string newStartCoordString = Console.ReadLine();
-        if (newStartCoordString == "") newStartCoordString = "47.41718775277045, 8.628740563731998"; //Default start location (for testing)
-        if (TryParseWaypoint(newStartCoordString, out double newStartLat, out double newStartLon, out Coordinate newStart))
-        {
-            Console.WriteLine($"Valid waypoint: lat = {newStartLat}, long = {newStartLon}");
-        }
-        else
-        {
-            Console.WriteLine("Invalid waypoint format.");
-            return;
-        }
-
-        Console.Write("Please enter new departure direction in degrees: ");
-        if (!double.TryParse(Console.ReadLine(), out double newDepartureDegrees))
-        {
-            Console.WriteLine("Invalid departure degrees. Please enter a valid number.");
-            return;
-        }
-
-        // Transform the task
-        var transformedTask = TransformTask(inputTask, newStartLat, newStartLon, newDepartureDegrees);
-
-        // Transform the airspaces
-        var tmplStartLat = inputTask.turnpoints[0].waypoint.lat;
-        var tmplStartLon = inputTask.turnpoints[0].waypoint.lon;
-        Coordinate tmplStart = new Coordinate(tmplStartLat, tmplStartLon);
-        Coordinate tmplWP1 = new Coordinate(inputTask.turnpoints[1].waypoint.lat, inputTask.turnpoints[1].waypoint.lon);
-        var tmplFirstLeg = new Distance(tmplStart, tmplWP1);
-        var rotationAngle = (newDepartureDegrees - tmplFirstLeg.Bearing + 360)%360;
-
-
-        var transformedAirspaces = TransformAirspaces(airspacesTemplate, tmplStart, newStart, rotationAngle);
-
-        // Write the output files
-        string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmm");
-
-        if (outputFormat == "xctsk" || outputFormat == "both")
-        {
-            string outputFilename = $"TransformedTask_{timestamp}.xctsk";
-
-            var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                NullValueHandling = NullValueHandling.Ignore
-            };
-
-            File.WriteAllText(outputFilename, JsonConvert.SerializeObject(transformedTask, Formatting.Indented, settings));
-            Console.WriteLine($"Tasks transformed and saved to {outputFilename}");
-        }
-        if (outputFormat == "cup" || outputFormat == "both")
-        {
-            string outputFilename = $"TransformedTask_{timestamp}.cup";
-            File.WriteAllText(outputFilename, ConvertToCup(transformedTask));
-            Console.WriteLine($"Tasks transformed and saved to {outputFilename}");
-        }
-
-        // Write the transformed airspaces
-        string airspaceOutputFilename = $"TransformedAirspaces_{timestamp}.txt";
-        WriteOpenAir(transformedAirspaces, airspaceOutputFilename);
-        Console.WriteLine($"Airspaces transformed and saved to {airspaceOutputFilename}");
-    }
+    
 
     /// <summary>
     /// FROM HERE THE CODE RELATES TO AIRSPACE HANDLING
@@ -393,6 +394,6 @@ public partial class Program
         var lat = c.Latitude.Degrees.ToString("00") + ":" + c.Latitude.Minutes.ToString("00") + ":" + c.Latitude.Seconds.ToString("00") + " " + c.Latitude.Position;
         var lon = c.Longitude.Degrees.ToString("000") + ":" + c.Longitude.Minutes.ToString("00") + ":" + c.Longitude.Seconds.ToString("00") + " " + c.Longitude.Position;
 
-        return lat+lon;
+        return lat+" "+lon;
     }
 }
