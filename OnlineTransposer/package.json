@@ -7,22 +7,14 @@
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
     "build:dev": "webpack --mode development",
-    "type-check": "tsc --noEmit",
-    "test": "jest"
+    "type-check": "tsc --noEmit"
   },
-  "keywords": [
-    "paragliding",
-    "task",
-    "transformation",
-    "mapping"
-  ],
-  "author": "PGLaps",
-  "license": "MIT",
   "dependencies": {
     "leaflet": "^1.9.4"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.8",
+    "@types/node": "^20.11.0",
     "css-loader": "^6.8.1",
     "html-webpack-plugin": "^5.6.0",
     "style-loader": "^3.3.3",

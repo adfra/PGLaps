@@ -3,11 +3,11 @@
  * File path: src/app.ts
  */
 
-import MapComponent from './components/Map/MapComponent';
-import FileUploadComponent from './components/FileUpload/FileUploadComponent';
-import TaskService from './services/TaskService';
-import AirspaceService from './services/AirspaceService';
-import { FileService } from './services/FileService';
+import MapComponent from './components/map/mapComponent';
+import FileUploadComponent from './components/fileUpload/fileUploadComponent';
+import TaskService from './services/taskService';
+import AirspaceService from './services/airspaceService';
+import { FileService } from './services/fileService';
 import { XCTask } from './types/taskTypes';
 import { Airspace } from './types/airspaceTypes';
 
@@ -311,3 +311,11 @@ export class App {
 window.addEventListener('load', () => {
     const app = new App('pglaps-task-transformer');
 });
+
+declare global {
+    interface Window {
+        App: typeof App;
+    }
+}
+
+window.App = App;
