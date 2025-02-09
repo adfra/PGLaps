@@ -137,23 +137,31 @@ namespace PGLaps
                 turnpoints.Add(tp);
             }
 
-            //Add Final Point
-            var wpNextID = angles.Count + 1;
-            tp = new Turnpoint();
-            wp = new Waypoint();
+            if (CloseLoop)
+            {
+                //Add Final Point
+                var wpNextID = angles.Count + 1;
+                tp = new Turnpoint();
+                wp = new Waypoint();
 
-            tp.radius = fixedTPRadius; //TODO: FIXED VALUE, Should be flexible.
-            tp.type = "ESS";
+                tp.radius = fixedTPRadius; //TODO: FIXED VALUE, Should be flexible.
+                tp.type = "ESS";
 
-            wp.name = $"WP{wpNextID.ToString("D2")}";
-            wp.description = wp.name;
-            wp.altSmoothed = 0;
-            //TODO: These coordinates need to be extended to cater for the start radius
-            wp.lat = angles[0].LegA.Start.Latitude.DecimalDegree;
-            wp.lon = angles[0].LegA.Start.Longitude.DecimalDegree;
+                wp.name = $"WP{wpNextID.ToString("D2")}";
+                wp.description = wp.name;
+                wp.altSmoothed = 0;
+                //TODO: These coordinates need to be extended to cater for the start radius
+                wp.lat = angles[0].LegA.Start.Latitude.DecimalDegree;
+                wp.lon = angles[0].LegA.Start.Longitude.DecimalDegree;
 
-            tp.waypoint = wp;
-            turnpoints.Add(tp);
+                tp.waypoint = wp;
+                turnpoints.Add(tp);
+            }
+            else
+            {
+                //Make the last turnpoint in turnpoints the ESS within the file.
+                turnpoints[^1].type = "ESS";
+            }
 
             return turnpoints;
         }
