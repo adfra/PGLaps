@@ -174,23 +174,50 @@ export class App {
      * Handle task rotation
      */
     private handleTaskRotation(rotation: number): void {
-        if (!this.currentTask) return;
+      if (!this.currentTask) return;
 
-        try {
-            const transformation = {
-                newStartLat: this.currentTask.turnpoints[0].waypoint.lat,
-                newStartLon: this.currentTask.turnpoints[0].waypoint.lon,
-                rotationAngle: rotation
-            };
+      try {
+          // Transform task
+          const transformation = {
+              newStartLat: this.currentTask.turnpoints[0].waypoint.lat,
+              newStartLon: this.currentTask.turnpoints[0].waypoint.lon,
+              rotationAngle: rotation
+          };
 
-            const transformedTask = TaskService.transformTask(
-                this.currentTask,
-                transformation
-            );
-            this.map.displayTask(transformedTask);
-        } catch (error) {
-            this.handleError(error as Error);
-        }
+          const transformedTask = TaskService.transformTask(
+              this.currentTask,
+              transformation
+          );
+
+          // Transform airspace if present
+          if (this.currentAirspace) {
+              const airspaceTransformation = {
+                  templateStart: {
+                      lat: this.currentTask.turnpoints[0].waypoint.lat,
+                      lon: this.currentTask.turnpoints[0].waypoint.lon
+                  },
+                  newStart: {
+                      lat: transformedTask.turnpoints[0].waypoint.lat,
+                      lon: transformedTask.turnpoints[0].waypoint.lon
+                  },
+                  rotationAngle: rotation
+              };
+            
+              const transformedAirspace = AirspaceService.transformAirspaces(
+                  this.currentAirspace,
+                  airspaceTransformation
+              );
+            
+              // Update both task and airspace displays
+              this.map.displayTask(transformedTask);
+              this.map.displayAirspace(transformedAirspace);
+          } else {
+              // Update only task display
+              this.map.displayTask(transformedTask);
+          }
+      } catch (error) {
+          this.handleError(error as Error);
+      }
     }
 
     /**
