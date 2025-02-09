@@ -1,0 +1,35 @@
+{
+  "name": "pglaps-task-transformer",
+  "version": "1.0.0",
+  "description": "A tool for transforming paragliding competition tasks",
+  "main": "dist/bundle.js",
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "type-check": "tsc --noEmit",
+    "test": "jest"
+  },
+  "keywords": [
+    "paragliding",
+    "task",
+    "transformation",
+    "mapping"
+  ],
+  "author": "PGLaps",
+  "license": "MIT",
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.8",
+    "css-loader": "^6.8.1",
+    "html-webpack-plugin": "^5.6.0",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  }
+}
