@@ -115,17 +115,6 @@ export class App {
     }
 
     /**
-     * Set up event listeners
-     */
-     private setupEventListeners(): void {
-        // Handle rotation control changes
-        this.rotationControl.addEventListener('input', (e) => {
-            const rotation = parseFloat((e.target as HTMLInputElement).value);
-            this.handleTaskRotation(rotation);
-        });
-    }
-
-    /**
      * Handle task file loading
      */
     private handleTaskLoaded(task: XCTask): void {
@@ -218,22 +207,8 @@ export class App {
         if (!this.currentTask) return;
 
         try {
-            // Transform task
-            const transformation = {
-                newStartLat: this.currentTask.turnpoints[0].waypoint.lat,
-                newStartLon: this.currentTask.turnpoints[0].waypoint.lon,
-                rotationAngle: rotation
-            };
-
-            const transformedTask = TaskService.transformTask(
-                this.currentTask,
-                transformation
-            );
-
-            // Update task display
-            this.map.displayTask(transformedTask);
-
-            // Sync airspace with new task rotation
+            this.map.updateRotation(rotation);
+            
             if (this.currentAirspace) {
                 this.syncAirspaceWithTask(rotation);
             }
@@ -346,6 +321,13 @@ export class App {
         document.head.appendChild(style);
     }
 
+    private setupEventListeners(): void {
+        this.rotationControl.addEventListener('input', (e) => {
+            const rotation = parseFloat((e.target as HTMLInputElement).value);
+            this.handleTaskRotation(rotation);
+        });
+    }
+
     /**
      * Clean up resources
      */
@@ -355,6 +337,8 @@ export class App {
         this.container.innerHTML = '';
     }
 }
+
+
 
 // Initialize app when loaded in WordPress
 window.addEventListener('load', () => {

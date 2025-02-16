@@ -7,13 +7,18 @@ import L from 'leaflet';
 import { XCTask, Turnpoint } from '../../types/taskTypes';
 import { Airspace } from '../../types/airspaceTypes';
 import TaskService from '../../services/taskService';
-import { calculateDistance } from '../../utils/coordinateUtils';
+import { calculateDistance, calculateBearing } from '../../utils/coordinateUtils';
+
 
 interface MapOptions {
     center?: [number, number];
     zoom?: number;
     minZoom?: number;
     maxZoom?: number;
+}
+
+interface CustomMarkerOptions extends L.MarkerOptions {
+    originalPosition?: L.LatLng;
 }
 
 export class MapComponent {
@@ -25,6 +30,7 @@ export class MapComponent {
     private currentTask?: XCTask;
     private dragMarker?: L.Marker;
     private onTaskUpdate?: (task: XCTask) => void;
+    private currentRotation: number = 0;
 
     constructor(containerId: string, options: MapOptions = {}) {
         const defaultOptions: MapOptions = {
@@ -95,10 +101,21 @@ export class MapComponent {
         this.currentTask = task;
         if (!this.taskLayer) return;
 
-        // Clear existing task
+        // Store the current bearing for the first leg
+        if (task.turnpoints.length >= 2) {
+            const start = task.turnpoints[0].waypoint;
+            const next = task.turnpoints[1].waypoint;
+            const bearing = calculateBearing(
+                start.lat,
+                start.lon,
+                next.lat,
+                next.lon
+            );
+            this.currentRotation = bearing; // Update current rotation
+        }
+
         this.taskLayer.clearLayers();
 
-        // Draw turnpoint cylinders and route
         const turnpoints = task.turnpoints;
         const coordinates: L.LatLng[] = [];
 
@@ -106,7 +123,6 @@ export class MapComponent {
             const latLng = L.latLng(tp.waypoint.lat, tp.waypoint.lon);
             coordinates.push(latLng);
 
-            // Draw cylinder
             const circle = L.circle(latLng, {
                 radius: tp.radius,
                 color: this.getTurnpointColor(tp),
@@ -114,24 +130,19 @@ export class MapComponent {
                 weight: 2
             });
 
-            // Add marker
-            const marker = L.marker(latLng, {
-                draggable: index === 0, // Only start point is draggable
-                title: tp.waypoint.name
-            });
-
-            // Add popup with turnpoint info
-            marker.bindPopup(this.createTurnpointPopup(tp, index));
-
             if (index === 0) {
+                const markerOptions: CustomMarkerOptions = {
+                    draggable: true,
+                    title: tp.waypoint.name
+                };
+                const marker = L.marker(latLng, markerOptions);
                 this.setupDragHandlers(marker);
+                this.taskLayer.addLayer(marker);
             }
 
             this.taskLayer.addLayer(circle);
-            this.taskLayer.addLayer(marker);
         });
 
-        // Draw route line
         const routeLine = L.polyline(coordinates, {
             color: 'blue',
             weight: 2,
@@ -139,13 +150,7 @@ export class MapComponent {
         });
 
         this.taskLayer.addLayer(routeLine);
-
-        // Fit map to task bounds
-        this.map.fitBounds(routeLine.getBounds(), {
-            padding: [50, 50]
-        });
     }
-
     /**
      * Display airspace on map
      */
@@ -179,19 +184,41 @@ export class MapComponent {
      * Set up drag handlers for start point
      */
     private setupDragHandlers(marker: L.Marker): void {
+        marker.on('dragstart', () => {
+            const pos = marker.getLatLng();
+            (marker.options as CustomMarkerOptions).originalPosition = pos;
+        });
+
+        marker.on('drag', () => {
+            if (!this.taskLayer || !this.currentTask) return;
+            
+            const newPos = marker.getLatLng();
+            try {
+                // Preserve current rotation during drag
+                const previewTask = TaskService.transformTask(this.currentTask, {
+                    newStartLat: newPos.lat,
+                    newStartLon: newPos.lng,
+                    rotationAngle: this.currentRotation // Use tracked rotation
+                });
+                
+                this.displayTaskPreview(previewTask);
+            } catch (error) {
+                console.error('Task preview failed:', error);
+            }
+        });
+
         marker.on('dragend', (event) => {
             if (!this.currentTask) return;
             
             const newPos = marker.getLatLng();
-            const transformation = {
-                newStartLat: newPos.lat,
-                newStartLon: newPos.lng,
-                rotationAngle: this.calculateRotationAngle(newPos)
-            };
-
-            // Transform task
             try {
-                const transformedTask = TaskService.transformTask(this.currentTask, transformation);
+                const transformedTask = TaskService.transformTask(this.currentTask, {
+                    newStartLat: newPos.lat,
+                    newStartLon: newPos.lng,
+                    rotationAngle: this.currentRotation // Use tracked rotation
+                });
+                
+                this.currentTask = transformedTask; // Update current task
                 this.displayTask(transformedTask);
                 
                 if (this.onTaskUpdate) {
@@ -199,13 +226,70 @@ export class MapComponent {
                 }
             } catch (error) {
                 console.error('Task transformation failed:', error);
-                // Reset marker position
-                marker.setLatLng(L.latLng(
-                    this.currentTask.turnpoints[0].waypoint.lat,
-                    this.currentTask.turnpoints[0].waypoint.lon
-                ));
+                const originalPos = (marker.options as CustomMarkerOptions).originalPosition;
+                if (originalPos) {
+                    marker.setLatLng(originalPos);
+                }
             }
         });
+    }
+    // Add new method for task preview
+    private displayTaskPreview(task: XCTask): void {
+        if (!this.taskLayer) return;
+
+        this.taskLayer.clearLayers();
+
+        const turnpoints = task.turnpoints;
+        const coordinates: L.LatLng[] = [];
+
+        turnpoints.forEach((tp, index) => {
+            const latLng = L.latLng(tp.waypoint.lat, tp.waypoint.lon);
+            coordinates.push(latLng);
+
+            const circle = L.circle(latLng, {
+                radius: tp.radius,
+                color: this.getTurnpointColor(tp),
+                fill: false,
+                weight: 2,
+                opacity: 0.6,
+                dashArray: '5, 10'
+            });
+
+            if (index === 0) {
+                const markerOptions: CustomMarkerOptions = {
+                    draggable: true,
+                    title: tp.waypoint.name
+                };
+                const marker = L.marker(latLng, markerOptions);
+                this.setupDragHandlers(marker);
+                this.taskLayer.addLayer(marker);
+            }
+
+            this.taskLayer.addLayer(circle);
+        });
+
+        const routeLine = L.polyline(coordinates, {
+            color: 'blue',
+            weight: 2,
+            opacity: 0.6,
+            dashArray: '5, 10'
+        });
+
+        this.taskLayer.addLayer(routeLine);
+    }
+
+    // Add method to handle rotation updates from UI
+    public updateRotation(degrees: number): void {
+        this.currentRotation = degrees;
+        if (this.currentTask) {
+            const start = this.currentTask.turnpoints[0].waypoint;
+            const transformedTask = TaskService.transformTask(this.currentTask, {
+                newStartLat: start.lat,
+                newStartLon: start.lon,
+                rotationAngle: degrees
+            });
+            this.displayTask(transformedTask);
+        }
     }
 
     /**
