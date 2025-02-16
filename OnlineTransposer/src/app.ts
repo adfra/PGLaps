@@ -10,6 +10,8 @@ import AirspaceService from './services/airspaceService';
 import { FileService } from './services/fileService';
 import { XCTask } from './types/taskTypes';
 import { Airspace } from './types/airspaceTypes';
+import { calculateBearing } from './utils/coordinateUtils';
+
 
 export class App {
     private map: MapComponent;
@@ -115,13 +117,11 @@ export class App {
     /**
      * Set up event listeners
      */
-    private setupEventListeners(): void {
+     private setupEventListeners(): void {
         // Handle rotation control changes
         this.rotationControl.addEventListener('input', (e) => {
-            if (this.currentTask) {
-                const rotation = parseInt((e.target as HTMLInputElement).value);
-                this.handleTaskRotation(rotation);
-            }
+            const rotation = parseFloat((e.target as HTMLInputElement).value);
+            this.handleTaskRotation(rotation);
         });
     }
 
@@ -131,7 +131,20 @@ export class App {
     private handleTaskLoaded(task: XCTask): void {
         this.currentTask = task;
         this.map.displayTask(task);
-        this.rotationControl.value = '0';
+        // Determine initial rotationControl.Value
+        const oldFirstLegBearing = calculateBearing(
+            task.turnpoints[0].waypoint.lat,
+            task.turnpoints[0].waypoint.lon,
+            task.turnpoints[1].waypoint.lat,
+            task.turnpoints[1].waypoint.lon
+        );
+
+        // Reset rotation control and store initial state
+        this.rotationControl.value = oldFirstLegBearing.toString();
+        // If airspace is already loaded, ensure it's properly aligned
+        if (this.currentAirspace) {
+            this.syncAirspaceWithTask(0);
+        }
         this.showNotification('Task loaded successfully');
     }
 
@@ -140,8 +153,36 @@ export class App {
      */
     private handleAirspaceLoaded(airspace: Airspace[]): void {
         this.currentAirspace = airspace;
-        this.map.displayAirspace(airspace);
+        // If task is already loaded, ensure airspace is properly aligned
+        if (this.currentTask) {
+            this.syncAirspaceWithTask(parseFloat(this.rotationControl.value));
+        } else {
+            this.map.displayAirspace(airspace);
+        }
         this.showNotification('Airspace loaded successfully');
+    }
+
+    private syncAirspaceWithTask(rotation: number): void {
+        if (!this.currentTask || !this.currentAirspace) return;
+
+        const airspaceTransformation = {
+            templateStart: {
+                lat: this.currentTask.turnpoints[0].waypoint.lat,
+                lon: this.currentTask.turnpoints[0].waypoint.lon
+            },
+            newStart: {
+                lat: this.currentTask.turnpoints[0].waypoint.lat,
+                lon: this.currentTask.turnpoints[0].waypoint.lon
+            },
+            rotationAngle: rotation
+        };
+        
+        const transformedAirspace = AirspaceService.transformAirspaces(
+            this.currentAirspace,
+            airspaceTransformation
+        );
+        
+        this.map.displayAirspace(transformedAirspace);
     }
 
     /**
@@ -174,50 +215,31 @@ export class App {
      * Handle task rotation
      */
     private handleTaskRotation(rotation: number): void {
-      if (!this.currentTask) return;
+        if (!this.currentTask) return;
 
-      try {
-          // Transform task
-          const transformation = {
-              newStartLat: this.currentTask.turnpoints[0].waypoint.lat,
-              newStartLon: this.currentTask.turnpoints[0].waypoint.lon,
-              rotationAngle: rotation
-          };
+        try {
+            // Transform task
+            const transformation = {
+                newStartLat: this.currentTask.turnpoints[0].waypoint.lat,
+                newStartLon: this.currentTask.turnpoints[0].waypoint.lon,
+                rotationAngle: rotation
+            };
 
-          const transformedTask = TaskService.transformTask(
-              this.currentTask,
-              transformation
-          );
+            const transformedTask = TaskService.transformTask(
+                this.currentTask,
+                transformation
+            );
 
-          // Transform airspace if present
-          if (this.currentAirspace) {
-              const airspaceTransformation = {
-                  templateStart: {
-                      lat: this.currentTask.turnpoints[0].waypoint.lat,
-                      lon: this.currentTask.turnpoints[0].waypoint.lon
-                  },
-                  newStart: {
-                      lat: transformedTask.turnpoints[0].waypoint.lat,
-                      lon: transformedTask.turnpoints[0].waypoint.lon
-                  },
-                  rotationAngle: rotation
-              };
-            
-              const transformedAirspace = AirspaceService.transformAirspaces(
-                  this.currentAirspace,
-                  airspaceTransformation
-              );
-            
-              // Update both task and airspace displays
-              this.map.displayTask(transformedTask);
-              this.map.displayAirspace(transformedAirspace);
-          } else {
-              // Update only task display
-              this.map.displayTask(transformedTask);
-          }
-      } catch (error) {
-          this.handleError(error as Error);
-      }
+            // Update task display
+            this.map.displayTask(transformedTask);
+
+            // Sync airspace with new task rotation
+            if (this.currentAirspace) {
+                this.syncAirspaceWithTask(rotation);
+            }
+        } catch (error) {
+            this.handleError(error as Error);
+        }
     }
 
     /**
