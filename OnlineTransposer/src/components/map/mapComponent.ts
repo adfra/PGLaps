@@ -289,6 +289,8 @@ export class MapComponent {
                 rotationAngle: degrees
             });
             this.displayTask(transformedTask);
+            // Notify app so currentTask stays in sync for export
+            this.onTaskUpdate?.(transformedTask);
         }
     }
 
