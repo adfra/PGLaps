@@ -7,7 +7,7 @@ import L from 'leaflet';
 import { XCTask, Turnpoint } from '../../types/taskTypes';
 import { Airspace } from '../../types/airspaceTypes';
 import TaskService from '../../services/taskService';
-import { calculateDistance, calculateBearing } from '../../utils/coordinateUtils';
+import { calculateBearing } from '../../utils/coordinateUtils';
 
 
 interface MapOptions {
@@ -302,20 +302,20 @@ export class MapComponent {
 
         const oldStart = this.currentTask.turnpoints[0].waypoint;
         const oldNext = this.currentTask.turnpoints[1].waypoint;
-        
-        const oldBearing = calculateDistance(
+
+        const oldBearing = calculateBearing(
             oldStart.lat,
             oldStart.lon,
             oldNext.lat,
             oldNext.lon
-        ).bearing;
+        );
 
-        const newBearing = calculateDistance(
+        const newBearing = calculateBearing(
             newPos.lat,
             newPos.lng,
             oldNext.lat,
             oldNext.lon
-        ).bearing;
+        );
 
         return newBearing - oldBearing;
     }
