@@ -64,9 +64,9 @@ export class AirspaceService {
                 );
 
                 transformedAirspace.coordinates.push({
+                    ...coordinate,
                     lat: newPosition.lat,
                     lon: newPosition.lon,
-                    type: 'DP'
                 });
             }
 

@@ -167,15 +167,16 @@ export function validateTaskGeometry(task: XCTask): boolean {
  */
 function isPointInAirspace(point: Coordinate, airspace: Airspace): boolean {
     // Ray casting algorithm for point-in-polygon
+    // x = longitude (east-west), y = latitude (north-south)
     let inside = false;
-    const x = point.lat;
-    const y = point.lon;
+    const x = point.lon;
+    const y = point.lat;
 
     for (let i = 0, j = airspace.coordinates.length - 1; i < airspace.coordinates.length; j = i++) {
-        const xi = airspace.coordinates[i].lat;
-        const yi = airspace.coordinates[i].lon;
-        const xj = airspace.coordinates[j].lat;
-        const yj = airspace.coordinates[j].lon;
+        const xi = airspace.coordinates[i].lon;
+        const yi = airspace.coordinates[i].lat;
+        const xj = airspace.coordinates[j].lon;
+        const yj = airspace.coordinates[j].lat;
 
         const intersect = ((yi > y) !== (yj > y))
             && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);

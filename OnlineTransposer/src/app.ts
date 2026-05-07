@@ -179,6 +179,16 @@ export class App {
      */
     private handleTaskUpdate(task: XCTask): void {
         this.currentTask = task;
+        // Keep rotation slider in sync with actual first-leg bearing
+        if (task.turnpoints.length >= 2) {
+            const bearing = calculateBearing(
+                task.turnpoints[0].waypoint.lat,
+                task.turnpoints[0].waypoint.lon,
+                task.turnpoints[1].waypoint.lat,
+                task.turnpoints[1].waypoint.lon
+            );
+            this.rotationControl.value = bearing.toString();
+        }
         if (this.currentAirspace) {
             const transformation = {
                 templateStart: {

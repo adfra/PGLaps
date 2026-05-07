@@ -170,8 +170,7 @@ export function generateXCTaskFile(task: XCTask): string {
  */
 
 function padNumber(num: number, width: number): string {
-  const numStr = Math.floor(num).toString();
-  return numStr.length >= width ? numStr : new Array(width - numStr.length + 1).join('0') + numStr;
+    return String(Math.floor(num)).padStart(width, '0');
 }
 
 export function generateOpenAirFile(airspaces: Airspace[]): string {
