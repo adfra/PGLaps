@@ -18,6 +18,7 @@ export class App {
     private fileUpload: FileUploadComponent;
     private currentTask?: XCTask;
     private currentAirspace?: Airspace[];
+    private originalAirspace?: Airspace[];
     private originalTaskStart?: { lat: number; lon: number };
     private originalTaskBearing?: number;
     private container: HTMLElement;
@@ -147,6 +148,9 @@ export class App {
 
         this.map.displayTask(task);
 
+        // Fit map to show the entire task
+        this.map.fitBoundsToTask();
+
         // Reset rotation control to original bearing
         this.rotationControl.value = this.originalTaskBearing.toString();
         this.departureAngleDisplay.value = `${Math.round(this.originalTaskBearing)}°`;
@@ -162,6 +166,8 @@ export class App {
      * Handle airspace file loading
      */
     private handleAirspaceLoaded(airspace: Airspace[]): void {
+        // Store the original airspace template for transformations
+        this.originalAirspace = JSON.parse(JSON.stringify(airspace));
         this.currentAirspace = airspace;
         // If task is already loaded, ensure airspace is properly aligned
         if (this.currentTask) {
@@ -173,7 +179,7 @@ export class App {
     }
 
     private syncAirspaceWithTask(targetBearing: number): void {
-        if (!this.currentTask || !this.currentAirspace || !this.originalTaskStart || this.originalTaskBearing === undefined) return;
+        if (!this.currentTask || !this.originalAirspace || !this.originalTaskStart || this.originalTaskBearing === undefined) return;
 
         // Calculate relative rotation (difference from original bearing)
         const relativeRotation = targetBearing - this.originalTaskBearing;
@@ -187,10 +193,14 @@ export class App {
             rotationAngle: relativeRotation
         };
 
+        // Always transform from the original airspace template
         const transformedAirspace = AirspaceService.transformAirspaces(
-            this.currentAirspace,
+            this.originalAirspace,
             airspaceTransformation
         );
+
+        // Store the transformed airspace for export
+        this.currentAirspace = transformedAirspace;
 
         this.map.displayAirspace(transformedAirspace);
     }

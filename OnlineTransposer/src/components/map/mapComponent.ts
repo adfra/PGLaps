@@ -345,6 +345,9 @@ export class MapComponent {
                 this.currentTask = transformedTask;
                 this.displayTask(transformedTask);
 
+                // Fit map to show the entire task after move
+                this.fitBoundsToTask();
+
                 // Set timeout to prevent click event from firing immediately after drag
                 this.clickMoveTimeout = window.setTimeout(() => {
                     this.clickMoveTimeout = undefined;
@@ -510,6 +513,21 @@ export class MapComponent {
      */
     public setTaskUpdateCallback(callback: (task: XCTask) => void): void {
         this.onTaskUpdate = callback;
+    }
+
+    /**
+     * Fit map bounds to show all task waypoints
+     */
+    public fitBoundsToTask(): void {
+        if (!this.currentTask) return;
+
+        const bounds = L.latLngBounds(
+            this.currentTask.turnpoints.map(tp =>
+                L.latLng(tp.waypoint.lat, tp.waypoint.lon)
+            )
+        );
+
+        this.map.fitBounds(bounds, { padding: [50, 50] });
     }
 
     /**
