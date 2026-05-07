@@ -8,6 +8,7 @@ import { XCTask, Turnpoint } from '../../types/taskTypes';
 import { Airspace } from '../../types/airspaceTypes';
 import TaskService from '../../services/taskService';
 import { calculateBearing } from '../../utils/coordinateUtils';
+import { calculateOptimizedTaskLine } from '../../utils/waypointOptimizer';
 
 
 interface MapOptions {
@@ -125,11 +126,10 @@ export class MapComponent {
         this.taskLayer.clearLayers();
 
         const turnpoints = task.turnpoints;
-        const coordinates: L.LatLng[] = [];
 
+        // Draw cylinders (circles) and marker
         turnpoints.forEach((tp, index) => {
             const latLng = L.latLng(tp.waypoint.lat, tp.waypoint.lon);
-            coordinates.push(latLng);
 
             const circle = L.circle(latLng, {
                 radius: tp.radius,
@@ -151,7 +151,13 @@ export class MapComponent {
             this.taskLayer.addLayer(circle);
         });
 
-        const routeLine = L.polyline(coordinates, {
+        // Calculate and draw optimized task line (shortest path between cylinders)
+        const optimizedWaypoints = calculateOptimizedTaskLine(turnpoints);
+        const optimizedCoordinates = optimizedWaypoints.map(wp =>
+            L.latLng(wp.lat, wp.lon)
+        );
+
+        const routeLine = L.polyline(optimizedCoordinates, {
             color: 'blue',
             weight: 2,
             opacity: 0.8
@@ -202,8 +208,6 @@ export class MapComponent {
 
             const newPos = marker.getLatLng();
             try {
-                console.log('Drag - newPos:', newPos.lat, newPos.lng);
-
                 // Calculate current bearing to preserve rotation during drag
                 const currentBearing = calculateBearing(
                     this.currentTask.turnpoints[0].waypoint.lat,
@@ -212,8 +216,6 @@ export class MapComponent {
                     this.currentTask.turnpoints[1].waypoint.lon
                 );
 
-                console.log('Drag - currentBearing:', currentBearing);
-
                 // Transform using current task to preserve previous rotations/position changes
                 const previewTask = TaskService.transformTask(this.currentTask, {
                     newStartLat: newPos.lat,
@@ -221,7 +223,6 @@ export class MapComponent {
                     rotationAngle: currentBearing
                 });
 
-                console.log('Drag - previewTask turnpoints:', previewTask.turnpoints.length);
                 this.displayTaskPreview(previewTask);
             } catch (error) {
                 console.error('Task preview failed:', error);
@@ -233,8 +234,6 @@ export class MapComponent {
 
             const newPos = marker.getLatLng();
             try {
-                console.log('DragEnd - newPos:', newPos.lat, newPos.lng);
-
                 // Calculate current bearing to preserve rotation during drag
                 const currentBearing = calculateBearing(
                     this.currentTask.turnpoints[0].waypoint.lat,
@@ -243,17 +242,12 @@ export class MapComponent {
                     this.currentTask.turnpoints[1].waypoint.lon
                 );
 
-                console.log('DragEnd - currentBearing:', currentBearing);
-
                 // Transform using current task to preserve previous rotations/position changes
                 const transformedTask = TaskService.transformTask(this.currentTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
                     rotationAngle: currentBearing
                 });
-
-                console.log('DragEnd - transformedTask turnpoints:', transformedTask.turnpoints.length);
-                console.log('DragEnd - first waypoint:', transformedTask.turnpoints[0].waypoint);
 
                 this.currentTask = transformedTask;
                 this.displayTask(transformedTask);
@@ -282,11 +276,10 @@ export class MapComponent {
         });
 
         const turnpoints = task.turnpoints;
-        const coordinates: L.LatLng[] = [];
 
+        // Draw cylinders (circles) for preview
         turnpoints.forEach((tp, index) => {
             const latLng = L.latLng(tp.waypoint.lat, tp.waypoint.lon);
-            coordinates.push(latLng);
 
             const circle = L.circle(latLng, {
                 radius: tp.radius,
@@ -300,7 +293,13 @@ export class MapComponent {
             this.taskLayer.addLayer(circle);
         });
 
-        const routeLine = L.polyline(coordinates, {
+        // Calculate and draw optimized task line for preview
+        const optimizedWaypoints = calculateOptimizedTaskLine(turnpoints);
+        const optimizedCoordinates = optimizedWaypoints.map(wp =>
+            L.latLng(wp.lat, wp.lon)
+        );
+
+        const routeLine = L.polyline(optimizedCoordinates, {
             color: 'blue',
             weight: 2,
             opacity: 0.6,
