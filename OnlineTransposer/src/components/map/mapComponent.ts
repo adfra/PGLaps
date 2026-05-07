@@ -198,18 +198,27 @@ export class MapComponent {
         });
 
         marker.on('drag', () => {
-            if (!this.taskLayer || !this.originalTask) return;
+            if (!this.taskLayer || !this.currentTask) return;
 
             const newPos = marker.getLatLng();
             try {
                 console.log('Drag - newPos:', newPos.lat, newPos.lng);
-                console.log('Drag - currentRotation:', this.currentRotation);
 
-                // Transform using current rotation from slider
-                const previewTask = TaskService.transformTask(this.originalTask, {
+                // Calculate current bearing to preserve rotation during drag
+                const currentBearing = calculateBearing(
+                    this.currentTask.turnpoints[0].waypoint.lat,
+                    this.currentTask.turnpoints[0].waypoint.lon,
+                    this.currentTask.turnpoints[1].waypoint.lat,
+                    this.currentTask.turnpoints[1].waypoint.lon
+                );
+
+                console.log('Drag - currentBearing:', currentBearing);
+
+                // Transform using current task to preserve previous rotations/position changes
+                const previewTask = TaskService.transformTask(this.currentTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
-                    rotationAngle: this.currentRotation
+                    rotationAngle: currentBearing
                 });
 
                 console.log('Drag - previewTask turnpoints:', previewTask.turnpoints.length);
@@ -220,18 +229,27 @@ export class MapComponent {
         });
 
         marker.on('dragend', (event) => {
-            if (!this.originalTask) return;
+            if (!this.currentTask) return;
 
             const newPos = marker.getLatLng();
             try {
                 console.log('DragEnd - newPos:', newPos.lat, newPos.lng);
-                console.log('DragEnd - currentRotation:', this.currentRotation);
 
-                // Transform using current rotation from slider
-                const transformedTask = TaskService.transformTask(this.originalTask, {
+                // Calculate current bearing to preserve rotation during drag
+                const currentBearing = calculateBearing(
+                    this.currentTask.turnpoints[0].waypoint.lat,
+                    this.currentTask.turnpoints[0].waypoint.lon,
+                    this.currentTask.turnpoints[1].waypoint.lat,
+                    this.currentTask.turnpoints[1].waypoint.lon
+                );
+
+                console.log('DragEnd - currentBearing:', currentBearing);
+
+                // Transform using current task to preserve previous rotations/position changes
+                const transformedTask = TaskService.transformTask(this.currentTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
-                    rotationAngle: this.currentRotation
+                    rotationAngle: currentBearing
                 });
 
                 console.log('DragEnd - transformedTask turnpoints:', transformedTask.turnpoints.length);
@@ -295,9 +313,9 @@ export class MapComponent {
     // Add method to handle rotation updates from UI
     public updateRotation(degrees: number): void {
         this.currentRotation = degrees;
-        if (this.originalTask) {
-            const start = this.originalTask.turnpoints[0].waypoint;
-            const transformedTask = TaskService.transformTask(this.originalTask, {
+        if (this.currentTask) {
+            const start = this.currentTask.turnpoints[0].waypoint;
+            const transformedTask = TaskService.transformTask(this.currentTask, {
                 newStartLat: start.lat,
                 newStartLon: start.lon,
                 rotationAngle: degrees
