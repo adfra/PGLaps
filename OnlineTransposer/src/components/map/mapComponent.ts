@@ -35,6 +35,8 @@ export class MapComponent {
     private currentRotation: number = 0;
     private originalTaskBearing?: number;
     private clickMoveTimeout?: number;
+    private singleClickTimeout?: number;
+    private pendingClickLocation?: L.LatLng;
 
     constructor(containerId: string, options: MapOptions = {}) {
         const defaultOptions: MapOptions = {
@@ -101,6 +103,7 @@ export class MapComponent {
 
     /**
      * Initialize map click handler for moving start pin
+     * Distinguishes between single click (move pin) and double click (zoom)
      */
     private initializeMapClickHandler(): void {
         this.map.on('click', (e: L.LeafletMouseEvent) => {
@@ -114,8 +117,32 @@ export class MapComponent {
             const clickedLat = e.latlng.lat;
             const clickedLon = e.latlng.lng;
 
-            // Move the start pin to clicked location
-            this.moveStartPinTo(clickedLat, clickedLon);
+            // Store the click location
+            this.pendingClickLocation = e.latlng;
+
+            // Clear any existing single-click timeout
+            if (this.singleClickTimeout) {
+                clearTimeout(this.singleClickTimeout);
+            }
+
+            // Set a timeout to execute single-click action if no second click comes
+            this.singleClickTimeout = window.setTimeout(() => {
+                // This is a single click - move the pin
+                if (this.pendingClickLocation) {
+                    this.moveStartPinTo(this.pendingClickLocation.lat, this.pendingClickLocation.lng);
+                }
+                this.singleClickTimeout = undefined;
+                this.pendingClickLocation = undefined;
+            }, 250); // Wait 250ms to detect if it's a double click
+        });
+
+        // Clear single-click timeout on double-click (let Leaflet handle zoom)
+        this.map.on('dblclick', () => {
+            if (this.singleClickTimeout) {
+                clearTimeout(this.singleClickTimeout);
+                this.singleClickTimeout = undefined;
+            }
+            this.pendingClickLocation = undefined;
         });
     }
 
