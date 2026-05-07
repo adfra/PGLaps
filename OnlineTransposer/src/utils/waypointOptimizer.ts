@@ -96,19 +96,6 @@ function getOptimizedWaypointCoordinate(angle: Angle, waypointRadius: number): {
     // For display, we want the TOUCH POINT (180° opposite to center)
     const touchPointBearing = normalizeBearing(centerBearing + 180);
 
-    console.log('Touch Point Calculation (180° opposite to center):');
-    console.log('  LegA bearing:', angle.legA.bearing);
-    console.log('  LegB bearing:', angle.legB.bearing);
-    console.log('  Turn direction:', angle.turnDirection);
-    console.log('  Turn direction multiplier:', angle.turnDirection === 'left' ? -1 : 1);
-    console.log('  Inside angle:', angle.degreesInside);
-    console.log('  Outside angle:', angle.degreesOutside);
-    console.log('  Half outside angle:', halfOutsideAngle);
-    console.log('  Reverse LegA bearing:', reverseLegABearing);
-    console.log('  Center bearing:', centerBearing);
-    console.log('  Touch point bearing (+180°):', touchPointBearing);
-    console.log('  Formula:', `${reverseLegABearing} + (${angle.turnDirection === 'left' ? -1 : 1}) * ${halfOutsideAngle} = ${centerBearing} → ${touchPointBearing}`);
-
     // Calculate the touch point position (where optimal path touches cylinder)
     const touchPoint = calculateDestination(
         angle.legA.end.lat,

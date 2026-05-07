@@ -34,6 +34,7 @@ export class MapComponent {
     private onTaskUpdate?: (task: XCTask) => void;
     private currentRotation: number = 0;
     private originalTaskBearing?: number;
+    private clickMoveTimeout?: number;
 
     constructor(containerId: string, options: MapOptions = {}) {
         const defaultOptions: MapOptions = {
@@ -55,6 +56,7 @@ export class MapComponent {
 
         this.initializeLayers();
         this.initializeControls();
+        this.initializeMapClickHandler();
     }
 
     /**
@@ -95,6 +97,65 @@ export class MapComponent {
             imperial: false,
             metric: true
         }).addTo(this.map);
+    }
+
+    /**
+     * Initialize map click handler for moving start pin
+     */
+    private initializeMapClickHandler(): void {
+        this.map.on('click', (e: L.LeafletMouseEvent) => {
+            // Don't process click if we just finished a drag (to avoid double-processing)
+            if (this.clickMoveTimeout) {
+                return;
+            }
+
+            if (!this.currentTask || !this.dragMarker) return;
+
+            const clickedLat = e.latlng.lat;
+            const clickedLon = e.latlng.lng;
+
+            // Move the start pin to clicked location
+            this.moveStartPinTo(clickedLat, clickedLon);
+        });
+    }
+
+    /**
+     * Move the start pin to a new location and transform the task
+     */
+    private moveStartPinTo(lat: number, lon: number): void {
+        if (!this.currentTask) return;
+
+        try {
+            // Calculate current bearing to preserve rotation during move
+            const currentBearing = calculateBearing(
+                this.currentTask.turnpoints[0].waypoint.lat,
+                this.currentTask.turnpoints[0].waypoint.lon,
+                this.currentTask.turnpoints[1].waypoint.lat,
+                this.currentTask.turnpoints[1].waypoint.lon
+            );
+
+            // Transform using current task to preserve previous rotations/position changes
+            const transformedTask = TaskService.transformTask(this.currentTask, {
+                newStartLat: lat,
+                newStartLon: lon,
+                rotationAngle: currentBearing
+            });
+
+            this.currentTask = transformedTask;
+
+            // Move the marker to new position
+            if (this.dragMarker) {
+                this.dragMarker.setLatLng(L.latLng(lat, lon));
+            }
+
+            this.displayTask(transformedTask);
+
+            if (this.onTaskUpdate) {
+                this.onTaskUpdate(transformedTask);
+            }
+        } catch (error) {
+            console.error('Start pin move failed:', error);
+        }
     }
 
     /**
@@ -143,9 +204,9 @@ export class MapComponent {
                     draggable: true,
                     title: tp.waypoint.name
                 };
-                const marker = L.marker(latLng, markerOptions);
-                this.setupDragHandlers(marker);
-                this.taskLayer.addLayer(marker);
+                this.dragMarker = L.marker(latLng, markerOptions);
+                this.setupDragHandlers(this.dragMarker);
+                this.taskLayer.addLayer(this.dragMarker);
             }
 
             this.taskLayer.addLayer(circle);
@@ -201,6 +262,11 @@ export class MapComponent {
         marker.on('dragstart', () => {
             const pos = marker.getLatLng();
             (marker.options as CustomMarkerOptions).originalPosition = pos;
+            // Clear any pending click timeout
+            if (this.clickMoveTimeout) {
+                clearTimeout(this.clickMoveTimeout);
+                this.clickMoveTimeout = undefined;
+            }
         });
 
         marker.on('drag', () => {
@@ -251,6 +317,11 @@ export class MapComponent {
 
                 this.currentTask = transformedTask;
                 this.displayTask(transformedTask);
+
+                // Set timeout to prevent click event from firing immediately after drag
+                this.clickMoveTimeout = window.setTimeout(() => {
+                    this.clickMoveTimeout = undefined;
+                }, 100);
 
                 if (this.onTaskUpdate) {
                     this.onTaskUpdate(transformedTask);
