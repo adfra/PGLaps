@@ -28,9 +28,11 @@ export class MapComponent {
     private terrainLayer?: L.TileLayer;
     private baseLayer?: L.TileLayer;
     private currentTask?: XCTask;
+    private originalTask?: XCTask;
     private dragMarker?: L.Marker;
     private onTaskUpdate?: (task: XCTask) => void;
     private currentRotation: number = 0;
+    private originalTaskBearing?: number;
 
     constructor(containerId: string, options: MapOptions = {}) {
         const defaultOptions: MapOptions = {
@@ -99,9 +101,15 @@ export class MapComponent {
      */
     public displayTask(task: XCTask): void {
         this.currentTask = task;
+
+        // Store original task on first load for transformation reference
+        if (!this.originalTask) {
+            this.originalTask = JSON.parse(JSON.stringify(task));
+        }
+
         if (!this.taskLayer) return;
 
-        // Store the current bearing for the first leg
+        // Store the original bearing on first load, then track current bearing
         if (task.turnpoints.length >= 2) {
             const start = task.turnpoints[0].waypoint;
             const next = task.turnpoints[1].waypoint;
@@ -111,7 +119,11 @@ export class MapComponent {
                 next.lat,
                 next.lon
             );
-            this.currentRotation = bearing; // Update current rotation
+            // Only store as original bearing if not already set
+            if (this.originalTaskBearing === undefined) {
+                this.originalTaskBearing = bearing;
+            }
+            this.currentRotation = bearing;
         }
 
         this.taskLayer.clearLayers();
@@ -190,17 +202,17 @@ export class MapComponent {
         });
 
         marker.on('drag', () => {
-            if (!this.taskLayer || !this.currentTask) return;
-            
+            if (!this.taskLayer || !this.originalTask) return;
+
             const newPos = marker.getLatLng();
             try {
-                // Preserve current rotation during drag
-                const previewTask = TaskService.transformTask(this.currentTask, {
+                // Always transform from original task to avoid compounding errors
+                const previewTask = TaskService.transformTask(this.originalTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
-                    rotationAngle: this.currentRotation // Use tracked rotation
+                    rotationAngle: this.currentRotation
                 });
-                
+
                 this.displayTaskPreview(previewTask);
             } catch (error) {
                 console.error('Task preview failed:', error);
@@ -208,19 +220,20 @@ export class MapComponent {
         });
 
         marker.on('dragend', (event) => {
-            if (!this.currentTask) return;
-            
+            if (!this.originalTask) return;
+
             const newPos = marker.getLatLng();
             try {
-                const transformedTask = TaskService.transformTask(this.currentTask, {
+                // Always transform from original task to avoid compounding errors
+                const transformedTask = TaskService.transformTask(this.originalTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
-                    rotationAngle: this.currentRotation // Use tracked rotation
+                    rotationAngle: this.currentRotation
                 });
-                
-                this.currentTask = transformedTask; // Update current task
+
+                this.currentTask = transformedTask;
                 this.displayTask(transformedTask);
-                
+
                 if (this.onTaskUpdate) {
                     this.onTaskUpdate(transformedTask);
                 }
@@ -281,13 +294,14 @@ export class MapComponent {
     // Add method to handle rotation updates from UI
     public updateRotation(degrees: number): void {
         this.currentRotation = degrees;
-        if (this.currentTask) {
-            const start = this.currentTask.turnpoints[0].waypoint;
-            const transformedTask = TaskService.transformTask(this.currentTask, {
+        if (this.originalTask) {
+            const start = this.originalTask.turnpoints[0].waypoint;
+            const transformedTask = TaskService.transformTask(this.originalTask, {
                 newStartLat: start.lat,
                 newStartLon: start.lon,
                 rotationAngle: degrees
             });
+            this.currentTask = transformedTask;
             this.displayTask(transformedTask);
             // Notify app so currentTask stays in sync for export
             this.onTaskUpdate?.(transformedTask);

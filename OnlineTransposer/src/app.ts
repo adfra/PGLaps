@@ -18,6 +18,8 @@ export class App {
     private fileUpload: FileUploadComponent;
     private currentTask?: XCTask;
     private currentAirspace?: Airspace[];
+    private originalTaskStart?: { lat: number; lon: number };
+    private originalTaskBearing?: number;
     private container: HTMLElement;
     private rotationControl: HTMLInputElement;
     private fileService: FileService;
@@ -119,20 +121,27 @@ export class App {
      */
     private handleTaskLoaded(task: XCTask): void {
         this.currentTask = task;
-        this.map.displayTask(task);
-        // Determine initial rotationControl.Value
-        const oldFirstLegBearing = calculateBearing(
+
+        // Store original task state for transformations
+        this.originalTaskStart = {
+            lat: task.turnpoints[0].waypoint.lat,
+            lon: task.turnpoints[0].waypoint.lon
+        };
+        this.originalTaskBearing = calculateBearing(
             task.turnpoints[0].waypoint.lat,
             task.turnpoints[0].waypoint.lon,
             task.turnpoints[1].waypoint.lat,
             task.turnpoints[1].waypoint.lon
         );
 
-        // Reset rotation control and store initial state
-        this.rotationControl.value = oldFirstLegBearing.toString();
+        this.map.displayTask(task);
+
+        // Reset rotation control to original bearing
+        this.rotationControl.value = this.originalTaskBearing.toString();
+
         // If airspace is already loaded, ensure it's properly aligned
         if (this.currentAirspace) {
-            this.syncAirspaceWithTask(0);
+            this.syncAirspaceWithTask(this.originalTaskBearing);
         }
         this.showNotification('Task loaded successfully');
     }
@@ -151,26 +160,26 @@ export class App {
         this.showNotification('Airspace loaded successfully');
     }
 
-    private syncAirspaceWithTask(rotation: number): void {
-        if (!this.currentTask || !this.currentAirspace) return;
+    private syncAirspaceWithTask(targetBearing: number): void {
+        if (!this.currentTask || !this.currentAirspace || !this.originalTaskStart || this.originalTaskBearing === undefined) return;
+
+        // Calculate relative rotation (difference from original bearing)
+        const relativeRotation = targetBearing - this.originalTaskBearing;
 
         const airspaceTransformation = {
-            templateStart: {
-                lat: this.currentTask.turnpoints[0].waypoint.lat,
-                lon: this.currentTask.turnpoints[0].waypoint.lon
-            },
+            templateStart: this.originalTaskStart,
             newStart: {
                 lat: this.currentTask.turnpoints[0].waypoint.lat,
                 lon: this.currentTask.turnpoints[0].waypoint.lon
             },
-            rotationAngle: rotation
+            rotationAngle: relativeRotation
         };
-        
+
         const transformedAirspace = AirspaceService.transformAirspaces(
             this.currentAirspace,
             airspaceTransformation
         );
-        
+
         this.map.displayAirspace(transformedAirspace);
     }
 
@@ -189,19 +198,19 @@ export class App {
             );
             this.rotationControl.value = bearing.toString();
         }
-        if (this.currentAirspace) {
+        if (this.currentAirspace && this.originalTaskStart && this.originalTaskBearing !== undefined) {
+            const targetBearing = parseFloat(this.rotationControl.value);
+            const relativeRotation = targetBearing - this.originalTaskBearing;
+
             const transformation = {
-                templateStart: {
-                    lat: task.turnpoints[0].waypoint.lat,
-                    lon: task.turnpoints[0].waypoint.lon
-                },
+                templateStart: this.originalTaskStart,
                 newStart: {
                     lat: task.turnpoints[0].waypoint.lat,
                     lon: task.turnpoints[0].waypoint.lon
                 },
-                rotationAngle: parseFloat(this.rotationControl.value)
+                rotationAngle: relativeRotation
             };
-            
+
             const transformedAirspace = AirspaceService.transformAirspaces(
                 this.currentAirspace,
                 transformation
