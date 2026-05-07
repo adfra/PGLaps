@@ -105,26 +105,22 @@ export class MapComponent {
         // Store original task on first load for transformation reference
         if (!this.originalTask) {
             this.originalTask = JSON.parse(JSON.stringify(task));
+
+            // Store the original bearing
+            if (task.turnpoints.length >= 2) {
+                const start = task.turnpoints[0].waypoint;
+                const next = task.turnpoints[1].waypoint;
+                this.originalTaskBearing = calculateBearing(
+                    start.lat,
+                    start.lon,
+                    next.lat,
+                    next.lon
+                );
+                this.currentRotation = this.originalTaskBearing;
+            }
         }
 
         if (!this.taskLayer) return;
-
-        // Store the original bearing on first load, then track current bearing
-        if (task.turnpoints.length >= 2) {
-            const start = task.turnpoints[0].waypoint;
-            const next = task.turnpoints[1].waypoint;
-            const bearing = calculateBearing(
-                start.lat,
-                start.lon,
-                next.lat,
-                next.lon
-            );
-            // Only store as original bearing if not already set
-            if (this.originalTaskBearing === undefined) {
-                this.originalTaskBearing = bearing;
-            }
-            this.currentRotation = bearing;
-        }
 
         this.taskLayer.clearLayers();
 
@@ -206,13 +202,17 @@ export class MapComponent {
 
             const newPos = marker.getLatLng();
             try {
-                // Always transform from original task to avoid compounding errors
+                console.log('Drag - newPos:', newPos.lat, newPos.lng);
+                console.log('Drag - currentRotation:', this.currentRotation);
+
+                // Transform using current rotation from slider
                 const previewTask = TaskService.transformTask(this.originalTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
                     rotationAngle: this.currentRotation
                 });
 
+                console.log('Drag - previewTask turnpoints:', previewTask.turnpoints.length);
                 this.displayTaskPreview(previewTask);
             } catch (error) {
                 console.error('Task preview failed:', error);
@@ -224,12 +224,18 @@ export class MapComponent {
 
             const newPos = marker.getLatLng();
             try {
-                // Always transform from original task to avoid compounding errors
+                console.log('DragEnd - newPos:', newPos.lat, newPos.lng);
+                console.log('DragEnd - currentRotation:', this.currentRotation);
+
+                // Transform using current rotation from slider
                 const transformedTask = TaskService.transformTask(this.originalTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
                     rotationAngle: this.currentRotation
                 });
+
+                console.log('DragEnd - transformedTask turnpoints:', transformedTask.turnpoints.length);
+                console.log('DragEnd - first waypoint:', transformedTask.turnpoints[0].waypoint);
 
                 this.currentTask = transformedTask;
                 this.displayTask(transformedTask);
@@ -246,11 +252,16 @@ export class MapComponent {
             }
         });
     }
-    // Add new method for task preview
+    // Add new method for task preview (doesn't recreate marker to preserve drag)
     private displayTaskPreview(task: XCTask): void {
         if (!this.taskLayer) return;
 
-        this.taskLayer.clearLayers();
+        // Clear everything except the draggable marker
+        this.taskLayer.eachLayer((layer) => {
+            if (!(layer instanceof L.Marker)) {
+                this.taskLayer!.removeLayer(layer);
+            }
+        });
 
         const turnpoints = task.turnpoints;
         const coordinates: L.LatLng[] = [];
@@ -267,16 +278,6 @@ export class MapComponent {
                 opacity: 0.6,
                 dashArray: '5, 10'
             });
-
-            if (index === 0) {
-                const markerOptions: CustomMarkerOptions = {
-                    draggable: true,
-                    title: tp.waypoint.name
-                };
-                const marker = L.marker(latLng, markerOptions);
-                this.setupDragHandlers(marker);
-                this.taskLayer.addLayer(marker);
-            }
 
             this.taskLayer.addLayer(circle);
         });
