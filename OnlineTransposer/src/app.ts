@@ -22,6 +22,7 @@ export class App {
     private originalTaskBearing?: number;
     private container: HTMLElement;
     private rotationControl: HTMLInputElement;
+    private departureAngleDisplay: HTMLInputElement;
     private fileService: FileService;
 
     constructor(containerId: string) {
@@ -72,10 +73,20 @@ export class App {
         this.rotationControl.value = '0';
         this.rotationControl.className = 'rotation-control';
 
+        // Create departure angle display (read-only)
+        this.departureAngleDisplay = document.createElement('input');
+        this.departureAngleDisplay.type = 'text';
+        this.departureAngleDisplay.readOnly = true;
+        this.departureAngleDisplay.value = '0°';
+        this.departureAngleDisplay.className = 'departure-angle-display';
+
         const rotationLabel = document.createElement('label');
+        rotationLabel.className = 'rotation-label';
         rotationLabel.textContent = 'Task Rotation: ';
         rotationLabel.appendChild(this.rotationControl);
+
         rotationContainer.appendChild(rotationLabel);
+        rotationContainer.appendChild(this.departureAngleDisplay);
 
         // Create export button
         const exportButton = document.createElement('button');
@@ -138,6 +149,7 @@ export class App {
 
         // Reset rotation control to original bearing
         this.rotationControl.value = this.originalTaskBearing.toString();
+        this.departureAngleDisplay.value = `${Math.round(this.originalTaskBearing)}°`;
 
         // If airspace is already loaded, ensure it's properly aligned
         if (this.currentAirspace) {
@@ -197,6 +209,7 @@ export class App {
                 task.turnpoints[1].waypoint.lon
             );
             this.rotationControl.value = bearing.toString();
+            this.departureAngleDisplay.value = `${Math.round(bearing)}°`;
         }
         if (this.currentAirspace && this.originalTaskStart && this.originalTaskBearing !== undefined) {
             const targetBearing = parseFloat(this.rotationControl.value);
@@ -227,7 +240,8 @@ export class App {
 
         try {
             this.map.updateRotation(rotation);
-            
+            this.departureAngleDisplay.value = `${Math.round(rotation)}°`;
+
             if (this.currentAirspace) {
                 this.syncAirspaceWithTask(rotation);
             }
@@ -284,34 +298,64 @@ export class App {
         const style = document.createElement('style');
         style.textContent = `
             .map-container {
-                height: 70vh;
-                margin-bottom: 20px;
+                height: 75vh;
+                margin-bottom: 10px;
             }
 
             .control-container {
-                padding: 20px;
+                padding: 10px;
                 background: #f5f5f5;
                 border-radius: 8px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .upload-container {
+                flex: 1;
+                min-width: 250px;
             }
 
             .rotation-container {
-                margin: 20px 0;
+                flex: 0 0 auto;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .rotation-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                white-space: nowrap;
             }
 
             .rotation-control {
-                width: 100%;
+                width: 100px;
+            }
+
+            .departure-angle-display {
+                width: 50px;
+                padding: 4px 6px;
+                background: #e9ecef;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                text-align: center;
+                font-weight: bold;
+                flex-shrink: 0;
             }
 
             .export-button {
-                display: block;
-                width: 100%;
-                padding: 10px;
+                padding: 10px 20px;
                 background: #28a745;
                 color: white;
                 border: none;
                 border-radius: 4px;
                 cursor: pointer;
                 transition: background 0.3s;
+                white-space: nowrap;
+                flex-shrink: 0;
             }
 
             .export-button:hover {
@@ -327,6 +371,8 @@ export class App {
                 color: white;
                 opacity: 0.9;
                 transition: opacity 0.3s;
+                z-index: 10000;
+                max-width: 80vw;
             }
 
             .notification.success {
@@ -335,6 +381,51 @@ export class App {
 
             .notification.error {
                 background: #dc3545;
+            }
+
+            /* Mobile responsive */
+            @media (max-width: 768px) {
+                .map-container {
+                    height: 60vh;
+                }
+
+                .control-container {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 8px;
+                }
+
+                .upload-container {
+                    min-width: 100%;
+                }
+
+                .rotation-container {
+                    width: 100%;
+                    justify-content: space-between;
+                }
+
+                .rotation-label {
+                    flex: 1;
+                }
+
+                .rotation-control {
+                    flex: 1;
+                    min-width: 80px;
+                }
+
+                .departure-angle-display {
+                    width: 50px;
+                }
+
+                .export-button {
+                    width: 100%;
+                }
+
+                .notification {
+                    left: 20px;
+                    right: 20px;
+                    max-width: none;
+                }
             }
         `;
         document.head.appendChild(style);

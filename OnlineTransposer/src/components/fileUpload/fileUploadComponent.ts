@@ -40,13 +40,17 @@ export class FileUploadComponent {
      * Initialize the upload interface
      */
     private initializeUploadUI(): void {
-        // Create container for upload elements
+        // Create container for upload elements (horizontal layout)
         const uploadContainer = document.createElement('div');
         uploadContainer.className = 'upload-container';
-        
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.className = 'upload-buttons-container';
+
         // Create task file input
         this.taskInput = this.createFileInput('task', 'xctsk', 'Upload Task (.xctsk)');
-        
+
         // Create airspace file input
         this.airspaceInput = this.createFileInput('airspace', 'txt', 'Upload Airspace (.txt)');
 
@@ -55,16 +59,18 @@ export class FileUploadComponent {
         this.dropZone.className = 'drop-zone';
         this.dropZone.innerHTML = `
             <div class="drop-zone-content">
-                <p>Drag and drop files here</p>
-                <p class="small">Accepts .xctsk and .txt files</p>
+                <p>Drag & Drop</p>
+                <p class="small">.xctsk / .txt</p>
             </div>
         `;
 
-        // Add elements to container
-        uploadContainer.appendChild(this.taskInput.parentElement!);
-        uploadContainer.appendChild(this.airspaceInput.parentElement!);
+        // Add elements to containers
+        buttonsContainer.appendChild(this.taskInput.parentElement!);
+        buttonsContainer.appendChild(this.airspaceInput.parentElement!);
+
+        uploadContainer.appendChild(buttonsContainer);
         uploadContainer.appendChild(this.dropZone);
-        
+
         this.container.appendChild(uploadContainer);
 
         // Add styles
@@ -165,13 +171,22 @@ export class FileUploadComponent {
         const style = document.createElement('style');
         style.textContent = `
             .upload-container {
-                padding: 20px;
-                border-radius: 8px;
-                background: #f5f5f5;
+                display: flex;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .upload-buttons-container {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                justify-content: center;
+                flex-shrink: 0;
             }
 
             .file-input-wrapper {
-                margin-bottom: 10px;
+                display: flex;
+                align-items: stretch;
             }
 
             .file-input {
@@ -180,12 +195,15 @@ export class FileUploadComponent {
 
             .file-input-label {
                 display: inline-block;
-                padding: 8px 16px;
+                padding: 10px 16px;
                 background: #007bff;
                 color: white;
                 border-radius: 4px;
                 cursor: pointer;
                 transition: background 0.3s;
+                text-align: center;
+                font-size: 14px;
+                white-space: nowrap;
             }
 
             .file-input-label:hover {
@@ -193,11 +211,16 @@ export class FileUploadComponent {
             }
 
             .drop-zone {
+                flex: 1;
                 border: 2px dashed #ccc;
                 border-radius: 8px;
-                padding: 20px;
+                padding: 15px;
                 text-align: center;
                 transition: all 0.3s;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                min-width: 120px;
             }
 
             .drop-zone.drag-over {
@@ -205,13 +228,44 @@ export class FileUploadComponent {
                 background: rgba(0, 123, 255, 0.1);
             }
 
-            .drop-zone-content {
+            .drop-zone-content p {
+                margin: 2px 0;
                 color: #666;
+                font-size: 14px;
             }
 
             .small {
-                font-size: 0.8em;
+                font-size: 0.85em;
                 color: #999;
+            }
+
+            /* Mobile responsive */
+            @media (max-width: 768px) {
+                .upload-container {
+                    flex-direction: column;
+                }
+
+                .upload-buttons-container {
+                    flex-direction: row;
+                }
+
+                .file-input-wrapper {
+                    flex: 1;
+                }
+
+                .file-input-label {
+                    padding: 12px 10px;
+                    font-size: 13px;
+                }
+
+                .drop-zone {
+                    min-height: 60px;
+                    padding: 10px;
+                }
+
+                .drop-zone-content p {
+                    font-size: 13px;
+                }
             }
         `;
         document.head.appendChild(style);
