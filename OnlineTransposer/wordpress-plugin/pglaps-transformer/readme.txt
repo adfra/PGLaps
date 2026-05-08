@@ -3,7 +3,7 @@ Contributors: pglaps
 Tags: paragliding, task transformer, xctask, airspace, map, leaflet
 Requires at least: 5.0
 Tested up to: 6.4
-Stable tag: 1.0.0
+Stable tag: 1.3.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
@@ -74,6 +74,13 @@ To build the JavaScript bundle:
 4. Copy `dist/bundle.js` to the plugin directory
 
 == Changelog ==
+
+= 1.3.0 =
+* Fixed airspace drift bug during task rotation
+* Improved coordinate transformation accuracy
+
+= 1.2.0 =
+* Bug fixes and stability improvements
 
 = 1.0.0 =
 * Initial release
