@@ -308,7 +308,7 @@ export class App {
         const style = document.createElement('style');
         style.textContent = `
             .map-container {
-                height: 75vh;
+                height: 500px;
                 margin-bottom: 10px;
             }
 
@@ -396,7 +396,7 @@ export class App {
             /* Mobile responsive */
             @media (max-width: 768px) {
                 .map-container {
-                    height: 60vh;
+                    height: 400px;
                 }
 
                 .control-container {
