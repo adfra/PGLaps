@@ -235,9 +235,10 @@ export class App {
             };
 
             const transformedAirspace = AirspaceService.transformAirspaces(
-                this.currentAirspace,
+                this.originalAirspace,
                 transformation
             );
+            this.currentAirspace = transformedAirspace;
             this.map.displayAirspace(transformedAirspace);
         }
     }
