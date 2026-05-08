@@ -153,11 +153,19 @@ export class MapComponent {
         if (!this.currentTask) return;
 
         try {
-            // Move the task without changing its bearing (rotationAngle = 0 preserves orientation)
+            // Calculate current bearing to preserve rotation during move
+            const currentBearing = calculateBearing(
+                this.currentTask.turnpoints[0].waypoint.lat,
+                this.currentTask.turnpoints[0].waypoint.lon,
+                this.currentTask.turnpoints[1].waypoint.lat,
+                this.currentTask.turnpoints[1].waypoint.lon
+            );
+
+            // Transform using current task to preserve previous rotations/position changes
             const transformedTask = TaskService.transformTask(this.currentTask, {
                 newStartLat: lat,
                 newStartLon: lon,
-                rotationAngle: 0
+                rotationAngle: currentBearing
             });
 
             this.currentTask = transformedTask;
@@ -293,11 +301,19 @@ export class MapComponent {
 
             const newPos = marker.getLatLng();
             try {
-                // Move task without changing bearing (rotationAngle = 0)
+                // Calculate current bearing to preserve rotation during drag
+                const currentBearing = calculateBearing(
+                    this.currentTask.turnpoints[0].waypoint.lat,
+                    this.currentTask.turnpoints[0].waypoint.lon,
+                    this.currentTask.turnpoints[1].waypoint.lat,
+                    this.currentTask.turnpoints[1].waypoint.lon
+                );
+
+                // Transform using current task to preserve previous rotations/position changes
                 const previewTask = TaskService.transformTask(this.currentTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
-                    rotationAngle: 0
+                    rotationAngle: currentBearing
                 });
 
                 this.displayTaskPreview(previewTask);
@@ -311,11 +327,19 @@ export class MapComponent {
 
             const newPos = marker.getLatLng();
             try {
-                // Move task without changing bearing (rotationAngle = 0)
+                // Calculate current bearing to preserve rotation during drag
+                const currentBearing = calculateBearing(
+                    this.currentTask.turnpoints[0].waypoint.lat,
+                    this.currentTask.turnpoints[0].waypoint.lon,
+                    this.currentTask.turnpoints[1].waypoint.lat,
+                    this.currentTask.turnpoints[1].waypoint.lon
+                );
+
+                // Transform using current task to preserve previous rotations/position changes
                 const transformedTask = TaskService.transformTask(this.currentTask, {
                     newStartLat: newPos.lat,
                     newStartLon: newPos.lng,
-                    rotationAngle: 0
+                    rotationAngle: currentBearing
                 });
 
                 this.currentTask = transformedTask;
@@ -387,26 +411,14 @@ export class MapComponent {
     }
 
     // Add method to handle rotation updates from UI
-    public updateRotation(targetBearing: number): void {
-        this.currentRotation = targetBearing;
-        if (this.currentTask && this.currentTask.turnpoints.length >= 2) {
-            // Calculate current bearing of the task
-            const currentBearing = calculateBearing(
-                this.currentTask.turnpoints[0].waypoint.lat,
-                this.currentTask.turnpoints[0].waypoint.lon,
-                this.currentTask.turnpoints[1].waypoint.lat,
-                this.currentTask.turnpoints[1].waypoint.lon
-            );
-
-            // Calculate relative rotation from current bearing to target bearing
-            const relativeRotation = targetBearing - currentBearing;
-
-            // Apply the relative rotation to the current task
-            const currentStart = this.currentTask.turnpoints[0].waypoint;
+    public updateRotation(degrees: number): void {
+        this.currentRotation = degrees;
+        if (this.currentTask) {
+            const start = this.currentTask.turnpoints[0].waypoint;
             const transformedTask = TaskService.transformTask(this.currentTask, {
-                newStartLat: currentStart.lat,
-                newStartLon: currentStart.lon,
-                rotationAngle: relativeRotation
+                newStartLat: start.lat,
+                newStartLon: start.lon,
+                rotationAngle: degrees
             });
             this.currentTask = transformedTask;
             this.displayTask(transformedTask);
