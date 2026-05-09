@@ -1,0 +1,32 @@
+{
+  "tasks": [
+    {
+      "id": "micro-v02-drag-race",
+      "name": "Micro Task v02 – Drag Race",
+      "image": "https://pglaps.com/wp-content/uploads/PGLaps_MicroTask_v02_CH-Husliberg.svg",
+      "xctskUrl": "https://pglaps.com/wp-content/uploads/dlm_uploads/PGLaps_MicroTask_v02_AU-Bright.xctsk",
+      "airspaceUrl": ""
+    },
+    {
+      "id": "micro-v01-double-8",
+      "name": "Micro Task v01 – Double 8",
+      "image": "https://pglaps.com/wp-content/uploads/2024/08/PGLaps_MicroTask-v01_Concept.svg",
+      "xctskUrl": "https://pglaps.com/wp-content/uploads/dlm_uploads/2024/08/PGLaps_MicroTask_v01_CH-VerbierLanding.xctsk",
+      "airspaceUrl": "https://pglaps.com/wp-content/uploads/dlm_uploads/2024/08/PGLaps_MicroTask_v01_CH-VerbierLanding_Airspace.txt"
+    },
+    {
+      "id": "mini-v02-butterfly",
+      "name": "Mini Task v02 – Butterfly",
+      "image": "https://pglaps.com/wp-content/uploads/2024/08/PGLaps_MiniTask-v02_Concept.svg",
+      "xctskUrl": "https://pglaps.com/wp-content/uploads/dlm_uploads/2024/08/PGLap_MiniTask_v02_CH_Disentis_Start1450m-2.xctsk",
+      "airspaceUrl": "https://pglaps.com/wp-content/uploads/dlm_uploads/2024/08/PGLap_MiniTask_v02_CH_Disentis_Start1450m.txt"
+    },
+    {
+      "id": "mini-v01-original",
+      "name": "Mini Task v01 – Original",
+      "image": "https://pglaps.com/wp-content/uploads/2024/07/PG-Laps_MiniTask_v01_InclDetails.svg",
+      "xctskUrl": "https://pglaps.com/wp-content/uploads/2024/08/PGLap_MiniTask_v01_AU_BlackHeath.xctsk",
+      "airspaceUrl": "https://pglaps.com/wp-content/uploads/2024/08/PGLap_MiniTask_v01_AU_BlackHeath.txt"
+    }
+  ]
+}

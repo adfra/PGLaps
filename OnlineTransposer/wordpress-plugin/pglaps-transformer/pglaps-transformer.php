@@ -3,7 +3,7 @@
  * Plugin Name: PGLaps Task Transformer
  * Plugin URI: https://github.com/yourusername/pglaps
  * Description: Paragliding competition task transformation tool with interactive map. Upload XCTask files and OpenAir airspace, transform tasks to new locations with automatic airspace rotation.
- * Version: 1.3.0
+ * Version: 1.5.0
  * Author: PGLaps
  * Author URI: https://pglaps.com
  * License: GPL-2.0+
@@ -27,7 +27,7 @@ class PGLaps_Transformer {
     /**
      * Plugin version
      */
-    private $version = '1.3.0';
+    private $version = '1.5.0';
 
     /**
      * Constructor
@@ -69,6 +69,25 @@ class PGLaps_Transformer {
     }
 
     /**
+     * Get official task templates from tasks.json file
+     */
+    private function get_task_templates() {
+        $tasks_file = PGLAPS_PLUGIN_DIR . 'tasks.json';
+
+        if (file_exists($tasks_file)) {
+            $json_data = file_get_contents($tasks_file);
+            $data = json_decode($json_data, true);
+
+            if ($data && isset($data['tasks'])) {
+                return $data;
+            }
+        }
+
+        // Fallback to empty array if file doesn't exist or is invalid
+        return array('tasks' => array());
+    }
+
+    /**
      * Enqueue frontend assets
      */
     public function enqueue_assets() {
@@ -96,6 +115,12 @@ class PGLaps_Transformer {
                 $this->version,
                 true
             );
+
+            // Pass task templates and plugin URL to JavaScript
+            wp_localize_script('pglaps-bundle', 'pglapsData', array(
+                'pluginUrl' => PGLAPS_PLUGIN_URL,
+                'tasks' => $this->get_task_templates()
+            ));
 
             // Add inline CSS for basic container styling
             wp_add_inline_style('leaflet-css', '

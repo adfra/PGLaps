@@ -5,6 +5,7 @@
 
 import MapComponent from './components/map/mapComponent';
 import FileUploadComponent from './components/fileUpload/fileUploadComponent';
+import TaskSelectorComponent from './components/taskSelector/taskSelector';
 import TaskService from './services/taskService';
 import AirspaceService from './services/airspaceService';
 import { FileService } from './services/fileService';
@@ -16,6 +17,7 @@ import { calculateBearing } from './utils/coordinateUtils';
 export class App {
     private map: MapComponent;
     private fileUpload: FileUploadComponent;
+    private taskSelector: TaskSelectorComponent;
     private currentTask?: XCTask;
     private currentAirspace?: Airspace[];
     private originalAirspace?: Airspace[];
@@ -51,20 +53,35 @@ export class App {
      * Create application layout
      */
     private createLayout(): void {
-        // Create main containers
-        const mapContainer = document.createElement('div');
-        mapContainer.id = 'map-container';
-        mapContainer.className = 'map-container';
+        // Create header (3 columns: task selector, upload buttons, drop zone)
+        const header = document.createElement('div');
+        header.className = 'app-header';
+        header.id = 'app-header';
 
-        const controlContainer = document.createElement('div');
-        controlContainer.className = 'control-container';
+        const taskSelectorContainer = document.createElement('div');
+        taskSelectorContainer.id = 'task-selector-container';
+        taskSelectorContainer.className = 'task-selector-container';
 
         const uploadContainer = document.createElement('div');
         uploadContainer.id = 'upload-container';
         uploadContainer.className = 'upload-container';
 
-        const rotationContainer = document.createElement('div');
-        rotationContainer.className = 'rotation-container';
+        const dropZoneContainer = document.createElement('div');
+        dropZoneContainer.id = 'drop-zone-container';
+        dropZoneContainer.className = 'drop-zone-container';
+
+        header.appendChild(taskSelectorContainer);
+        header.appendChild(uploadContainer);
+        header.appendChild(dropZoneContainer);
+
+        // Create map container
+        const mapContainer = document.createElement('div');
+        mapContainer.id = 'map-container';
+        mapContainer.className = 'map-container';
+
+        // Create footer (rotation slider, angle display, export button)
+        const footer = document.createElement('div');
+        footer.className = 'app-footer';
 
         // Create rotation control
         this.rotationControl = document.createElement('input');
@@ -81,27 +98,20 @@ export class App {
         this.departureAngleDisplay.value = '0°';
         this.departureAngleDisplay.className = 'departure-angle-display';
 
-        const rotationLabel = document.createElement('label');
-        rotationLabel.className = 'rotation-label';
-        rotationLabel.textContent = 'Task Rotation: ';
-        rotationLabel.appendChild(this.rotationControl);
-
-        rotationContainer.appendChild(rotationLabel);
-        rotationContainer.appendChild(this.departureAngleDisplay);
-
         // Create export button
         const exportButton = document.createElement('button');
-        exportButton.textContent = 'Export Files';
+        exportButton.textContent = 'Export';
         exportButton.className = 'export-button';
         exportButton.onclick = () => this.handleExport();
 
-        // Assemble layout
-        controlContainer.appendChild(uploadContainer);
-        controlContainer.appendChild(rotationContainer);
-        controlContainer.appendChild(exportButton);
+        footer.appendChild(this.rotationControl);
+        footer.appendChild(this.departureAngleDisplay);
+        footer.appendChild(exportButton);
 
+        // Assemble layout
+        this.container.appendChild(header);
         this.container.appendChild(mapContainer);
-        this.container.appendChild(controlContainer);
+        this.container.appendChild(footer);
 
         // Add styles
         this.addStyles();
@@ -117,12 +127,19 @@ export class App {
             zoom: 13
         });
 
-        // Initialize file upload
-        this.fileUpload = new FileUploadComponent('upload-container', {
+        // Initialize task selector
+        this.taskSelector = new TaskSelectorComponent('task-selector-container', {
             onTaskLoaded: (task) => this.handleTaskLoaded(task),
             onAirspaceLoaded: (airspace) => this.handleAirspaceLoaded(airspace),
             onError: (error) => this.handleError(error)
         });
+
+        // Initialize file upload (buttons only, drop zone separate)
+        this.fileUpload = new FileUploadComponent('upload-container', {
+            onTaskLoaded: (task) => this.handleTaskLoaded(task),
+            onAirspaceLoaded: (airspace) => this.handleAirspaceLoaded(airspace),
+            onError: (error) => this.handleError(error)
+        }, 'drop-zone-container');
 
         // Set up task update callback
         this.map.setTaskUpdateCallback((task) => this.handleTaskUpdate(task));
@@ -308,65 +325,101 @@ export class App {
     private addStyles(): void {
         const style = document.createElement('style');
         style.textContent = `
-            .map-container {
-                height: 500px;
-                margin-bottom: 10px;
+            #pglaps-task-transformer {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
             }
 
-            .control-container {
-                padding: 10px;
-                background: #f5f5f5;
-                border-radius: 8px;
-                display: flex;
-                flex-wrap: wrap;
+            .app-header {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
                 gap: 10px;
-                align-items: center;
+                padding: 8px;
+                background: #f8f9fa;
+                border-radius: 8px;
+            }
+
+            .task-selector-container {
+                min-width: 0;
             }
 
             .upload-container {
-                flex: 1;
-                min-width: 250px;
+                min-width: 0;
             }
 
-            .rotation-container {
-                flex: 0 0 auto;
-                display: flex;
-                gap: 10px;
-                align-items: center;
+            .drop-zone-container {
+                min-width: 0;
             }
 
-            .rotation-label {
+            .map-container {
+                height: 500px;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .app-footer {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                white-space: nowrap;
+                gap: 12px;
+                padding: 12px 16px;
+                background: #f8f9fa;
+                border-radius: 8px;
             }
 
             .rotation-control {
-                width: 100px;
+                flex: 1;
+                min-width: 120px;
+                height: 8px;
+                -webkit-appearance: none;
+                appearance: none;
+                background: #ddd;
+                border-radius: 4px;
+                outline: none;
+            }
+
+            .rotation-control::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 18px;
+                height: 18px;
+                background: #007bff;
+                border-radius: 50%;
+                cursor: pointer;
+            }
+
+            .rotation-control::-moz-range-thumb {
+                width: 18px;
+                height: 18px;
+                background: #007bff;
+                border-radius: 50%;
+                cursor: pointer;
+                border: none;
             }
 
             .departure-angle-display {
-                width: 50px;
-                padding: 4px 6px;
-                background: #e9ecef;
-                border: 1px solid #ced4da;
+                width: 48px;
+                padding: 6px 8px;
+                background: white;
+                border: 1px solid #ddd;
                 border-radius: 4px;
                 text-align: center;
-                font-weight: bold;
-                flex-shrink: 0;
+                font-weight: 600;
+                font-size: 14px;
+                color: #333;
             }
 
             .export-button {
-                padding: 10px 20px;
+                padding: 8px 20px;
                 background: #28a745;
                 color: white;
                 border: none;
                 border-radius: 4px;
                 cursor: pointer;
-                transition: background 0.3s;
+                font-weight: 600;
+                font-size: 14px;
+                transition: background 0.2s;
                 white-space: nowrap;
-                flex-shrink: 0;
             }
 
             .export-button:hover {
@@ -377,13 +430,15 @@ export class App {
                 position: fixed;
                 bottom: 20px;
                 right: 20px;
-                padding: 10px 20px;
-                border-radius: 4px;
+                padding: 12px 20px;
+                border-radius: 6px;
                 color: white;
-                opacity: 0.9;
+                font-size: 14px;
+                opacity: 0.95;
                 transition: opacity 0.3s;
                 z-index: 10000;
                 max-width: 80vw;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             }
 
             .notification.success {
@@ -396,40 +451,33 @@ export class App {
 
             /* Mobile responsive */
             @media (max-width: 768px) {
-                .map-container {
-                    height: 400px;
-                }
-
-                .control-container {
-                    flex-direction: column;
-                    align-items: stretch;
+                .app-header {
+                    grid-template-columns: 1fr;
                     gap: 8px;
                 }
 
-                .upload-container {
-                    min-width: 100%;
+                .map-container {
+                    height: 350px;
                 }
 
-                .rotation-container {
-                    width: 100%;
-                    justify-content: space-between;
-                }
-
-                .rotation-label {
-                    flex: 1;
+                .app-footer {
+                    flex-wrap: wrap;
+                    gap: 8px;
                 }
 
                 .rotation-control {
                     flex: 1;
-                    min-width: 80px;
+                    min-width: 100px;
                 }
 
                 .departure-angle-display {
-                    width: 50px;
+                    width: 44px;
+                    font-size: 13px;
                 }
 
                 .export-button {
-                    width: 100%;
+                    flex: 1;
+                    padding: 8px 16px;
                 }
 
                 .notification {
@@ -455,6 +503,9 @@ export class App {
     public destroy(): void {
         this.map.destroy();
         this.fileUpload.destroy();
+        if (this.taskSelector) {
+            this.taskSelector.destroy();
+        }
         this.container.innerHTML = '';
     }
 }

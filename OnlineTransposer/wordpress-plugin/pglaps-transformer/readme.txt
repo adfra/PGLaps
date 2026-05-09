@@ -3,7 +3,7 @@ Contributors: pglaps
 Tags: paragliding, task transformer, xctask, airspace, map, leaflet
 Requires at least: 5.0
 Tested up to: 6.4
-Stable tag: 1.3.0
+Stable tag: 1.5.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
@@ -16,6 +16,7 @@ The PGLaps Task Transformer provides an interactive tool for paragliding competi
 
 Features:
 
+* Official task templates from pglaps.com (one-click load)
 * Upload XCTask files (.xctsk) for task visualization
 * Upload OpenAir airspace files (.txt) for airspace overlay
 * Drag-and-drop or click-to-reposition the task start point
@@ -74,6 +75,17 @@ To build the JavaScript bundle:
 4. Copy `dist/bundle.js` to the plugin directory
 
 == Changelog ==
+
+= 1.5.0 =
+* Fixed task templates loading for WordPress integration
+* Added fallback mechanism for loading tasks.json when WordPress data unavailable
+* Improved error handling and user feedback for template loading issues
+
+= 1.4.0 =
+* Added official task templates dropdown with one-click loading
+* Redesigned UI with 3-column header (templates, upload buttons, drop zone)
+* Moved rotation controls and export to footer
+* Both task and airspace files load together when selecting a template
 
 = 1.3.0 =
 * Fixed airspace drift bug during task rotation

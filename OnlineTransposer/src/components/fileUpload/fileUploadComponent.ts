@@ -16,13 +16,14 @@ interface UploadCallbacks {
 
 export class FileUploadComponent {
     private container: HTMLElement;
+    private dropZoneContainer?: HTMLElement;
     private dropZone: HTMLElement;
     private taskInput: HTMLInputElement;
     private airspaceInput: HTMLInputElement;
     private callbacks: UploadCallbacks;
     private fileService: IFileService;
 
-    constructor(containerId: string, callbacks: UploadCallbacks) {
+    constructor(containerId: string, callbacks: UploadCallbacks, dropZoneContainerId?: string) {
         const container = document.getElementById(containerId);
         if (!container) {
             throw new Error(`Container element ${containerId} not found`);
@@ -32,6 +33,13 @@ export class FileUploadComponent {
         this.callbacks = callbacks;
         this.fileService = new FileService();
 
+        if (dropZoneContainerId) {
+            const dropZoneContainer = document.getElementById(dropZoneContainerId);
+            if (dropZoneContainer) {
+                this.dropZoneContainer = dropZoneContainer;
+            }
+        }
+
         this.initializeUploadUI();
         this.setupDragAndDrop();
     }
@@ -40,21 +48,23 @@ export class FileUploadComponent {
      * Initialize the upload interface
      */
     private initializeUploadUI(): void {
-        // Create container for upload elements (horizontal layout)
-        const uploadContainer = document.createElement('div');
-        uploadContainer.className = 'upload-container';
-
-        // Create buttons container
+        // Create buttons container (for middle column)
         const buttonsContainer = document.createElement('div');
         buttonsContainer.className = 'upload-buttons-container';
 
         // Create task file input
-        this.taskInput = this.createFileInput('task', 'xctsk', 'Upload Task (.xctsk)');
+        this.taskInput = this.createFileInput('task', 'xctsk', 'Upload Task');
 
         // Create airspace file input
-        this.airspaceInput = this.createFileInput('airspace', 'txt', 'Upload Airspace (.txt)');
+        this.airspaceInput = this.createFileInput('airspace', 'txt', 'Upload Airspace');
 
-        // Create drop zone
+        // Add buttons to buttons container
+        buttonsContainer.appendChild(this.taskInput.parentElement!);
+        buttonsContainer.appendChild(this.airspaceInput.parentElement!);
+
+        this.container.appendChild(buttonsContainer);
+
+        // Create drop zone (in separate container if provided)
         this.dropZone = document.createElement('div');
         this.dropZone.className = 'drop-zone';
         this.dropZone.innerHTML = `
@@ -64,14 +74,11 @@ export class FileUploadComponent {
             </div>
         `;
 
-        // Add elements to containers
-        buttonsContainer.appendChild(this.taskInput.parentElement!);
-        buttonsContainer.appendChild(this.airspaceInput.parentElement!);
-
-        uploadContainer.appendChild(buttonsContainer);
-        uploadContainer.appendChild(this.dropZone);
-
-        this.container.appendChild(uploadContainer);
+        if (this.dropZoneContainer) {
+            this.dropZoneContainer.appendChild(this.dropZone);
+        } else {
+            this.container.appendChild(this.dropZone);
+        }
 
         // Add styles
         this.addStyles();
@@ -168,25 +175,22 @@ export class FileUploadComponent {
      * Add required styles to the document
      */
     private addStyles(): void {
-        const style = document.createElement('style');
-        style.textContent = `
-            .upload-container {
-                display: flex;
-                gap: 10px;
-                align-items: stretch;
-            }
+        const styleId = 'file-upload-styles';
+        if (document.getElementById(styleId)) return;
 
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
             .upload-buttons-container {
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
                 justify-content: center;
-                flex-shrink: 0;
+                height: 100%;
             }
 
             .file-input-wrapper {
                 display: flex;
-                align-items: stretch;
             }
 
             .file-input {
@@ -194,7 +198,8 @@ export class FileUploadComponent {
             }
 
             .file-input-label {
-                display: inline-block;
+                display: block;
+                width: 100%;
                 padding: 10px 16px;
                 background: #007bff;
                 color: white;
@@ -202,7 +207,7 @@ export class FileUploadComponent {
                 cursor: pointer;
                 transition: background 0.3s;
                 text-align: center;
-                font-size: 14px;
+                font-size: 13px;
                 white-space: nowrap;
             }
 
@@ -211,7 +216,6 @@ export class FileUploadComponent {
             }
 
             .drop-zone {
-                flex: 1;
                 border: 2px dashed #ccc;
                 border-radius: 8px;
                 padding: 15px;
@@ -220,7 +224,8 @@ export class FileUploadComponent {
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                min-width: 120px;
+                height: 100%;
+                min-height: 70px;
             }
 
             .drop-zone.drag-over {
@@ -231,7 +236,7 @@ export class FileUploadComponent {
             .drop-zone-content p {
                 margin: 2px 0;
                 color: #666;
-                font-size: 14px;
+                font-size: 13px;
             }
 
             .small {
@@ -241,18 +246,6 @@ export class FileUploadComponent {
 
             /* Mobile responsive */
             @media (max-width: 768px) {
-                .upload-container {
-                    flex-direction: column;
-                }
-
-                .upload-buttons-container {
-                    flex-direction: row;
-                }
-
-                .file-input-wrapper {
-                    flex: 1;
-                }
-
                 .file-input-label {
                     padding: 12px 10px;
                     font-size: 13px;
@@ -264,7 +257,7 @@ export class FileUploadComponent {
                 }
 
                 .drop-zone-content p {
-                    font-size: 13px;
+                    font-size: 12px;
                 }
             }
         `;
@@ -287,6 +280,9 @@ export class FileUploadComponent {
         this.airspaceInput.remove();
         this.dropZone.remove();
         this.container.innerHTML = '';
+        if (this.dropZoneContainer) {
+            this.dropZoneContainer.innerHTML = '';
+        }
     }
 }
 
