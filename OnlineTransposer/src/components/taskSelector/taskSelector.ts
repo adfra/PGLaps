@@ -197,15 +197,18 @@ export class TaskSelectorComponent {
             const parsedTask = await this.fileService.parseTaskFile(taskFile);
             this.callbacks.onTaskLoaded(parsedTask);
 
-            // Load airspace file
-            const airspaceResponse = await fetch(task.airspaceUrl);
-            if (!airspaceResponse.ok) {
-                throw new Error(`Failed to load airspace file: ${airspaceResponse.statusText}`);
+            // Load airspace file if URL is provided
+            if (task.airspaceUrl) {
+                const airspaceResponse = await fetch(task.airspaceUrl);
+                if (airspaceResponse.ok) {
+                    const airspaceBlob = await airspaceResponse.blob();
+                    const airspaceFile = new File([airspaceBlob], 'airspace.txt', { type: 'text/plain' });
+                    const parsedAirspace = await this.fileService.parseAirspaceFile(airspaceFile);
+                    this.callbacks.onAirspaceLoaded(parsedAirspace);
+                } else {
+                    console.warn(`Airspace file unavailable (${airspaceResponse.status}): ${task.airspaceUrl}`);
+                }
             }
-            const airspaceBlob = await airspaceResponse.blob();
-            const airspaceFile = new File([airspaceBlob], 'airspace.txt', { type: 'text/plain' });
-            const parsedAirspace = await this.fileService.parseAirspaceFile(airspaceFile);
-            this.callbacks.onAirspaceLoaded(parsedAirspace);
 
         } catch (error) {
             console.error('Error loading task files:', error);

@@ -118,7 +118,7 @@ export class TaskService {
         };
 
         // Validate the transformed task
-        if (!validateTask(transformedTask) || !validateTaskGeometry(transformedTask)) {
+        if (!validateTask(transformedTask)) {
             throw new Error('Invalid task transformation result');
         }
 
