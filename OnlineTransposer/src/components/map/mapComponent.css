@@ -2,12 +2,22 @@
  * Map component custom styles
  */
 
-/* Location search control */
+/* Location search control - positioned to the right of zoom controls */
+.leaflet-top.leaflet-left .leaflet-control-search {
+    position: absolute;
+    left: 52px; /* Clear the zoom controls (approximately 52px wide) */
+    top: 10px; /* Match zoom controls top margin */
+    margin: 0;
+}
+
 .leaflet-control-search {
     background: white;
     padding: 5px;
     border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: flex;
+    gap: 5px;
+    align-items: center;
 }
 
 .leaflet-control-search input {
@@ -17,6 +27,7 @@
     font-size: 14px;
     width: 200px;
     outline: none;
+    margin: 0;
 }
 
 .leaflet-control-search input:focus {
@@ -31,7 +42,8 @@
     padding: 5px 15px;
     cursor: pointer;
     font-size: 14px;
-    margin-left: 5px;
+    margin: 0;
+    white-space: nowrap;
 }
 
 .leaflet-control-search button:hover {

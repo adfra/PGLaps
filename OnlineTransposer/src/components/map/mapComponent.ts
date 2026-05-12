@@ -39,7 +39,7 @@ class LocationSearchControl extends L.Control {
     }
 
     onAdd(map: L.Map): HTMLElement {
-        const container = L.DomUtil.create('div', 'leaflet-control-search');
+        const container = L.DomUtil.create('div', 'leaflet-control-search leaflet-bar');
 
         // Prevent map click events from propagating
         L.DomEvent.disableClickPropagation(container);
