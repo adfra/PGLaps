@@ -57,7 +57,7 @@ export class TaskSelectorComponent {
         // Create label
         const label = document.createElement('label');
         label.className = 'task-selector-label';
-        label.textContent = 'Official Tasks:';
+        label.textContent = 'Select official task...';
 
         // Create wrapper for dropdown and preview
         const contentWrapper = document.createElement('div');

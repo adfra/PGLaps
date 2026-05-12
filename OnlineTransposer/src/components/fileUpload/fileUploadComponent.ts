@@ -52,6 +52,12 @@ export class FileUploadComponent {
         const buttonsContainer = document.createElement('div');
         buttonsContainer.className = 'upload-buttons-container';
 
+        // Add label above buttons
+        const uploadLabel = document.createElement('div');
+        uploadLabel.className = 'upload-section-label';
+        uploadLabel.textContent = '...or upload files...';
+        buttonsContainer.appendChild(uploadLabel);
+
         // Create task file input
         this.taskInput = this.createFileInput('task', 'xctsk', 'Upload Task');
 
@@ -65,6 +71,15 @@ export class FileUploadComponent {
         this.container.appendChild(buttonsContainer);
 
         // Create drop zone (in separate container if provided)
+        const dropZoneWrapper = document.createElement('div');
+        dropZoneWrapper.className = 'drop-zone-wrapper';
+
+        // Add label above drop zone
+        const dropZoneLabel = document.createElement('div');
+        dropZoneLabel.className = 'upload-section-label';
+        dropZoneLabel.textContent = '...or drag and drop files here.';
+        dropZoneWrapper.appendChild(dropZoneLabel);
+
         this.dropZone = document.createElement('div');
         this.dropZone.className = 'drop-zone';
         this.dropZone.innerHTML = `
@@ -74,10 +89,12 @@ export class FileUploadComponent {
             </div>
         `;
 
+        dropZoneWrapper.appendChild(this.dropZone);
+
         if (this.dropZoneContainer) {
-            this.dropZoneContainer.appendChild(this.dropZone);
+            this.dropZoneContainer.appendChild(dropZoneWrapper);
         } else {
-            this.container.appendChild(this.dropZone);
+            this.container.appendChild(dropZoneWrapper);
         }
 
         // Add styles
@@ -184,9 +201,25 @@ export class FileUploadComponent {
             .upload-buttons-container {
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
-                justify-content: center;
+                gap: 6px;
                 height: 100%;
+                min-width: 0;
+            }
+
+            .drop-zone-wrapper {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                height: 100%;
+                min-width: 0;
+            }
+
+            .upload-section-label {
+                font-size: 13px;
+                font-weight: 600;
+                color: #333;
+                margin: 0;
+                white-space: nowrap;
             }
 
             .file-input-wrapper {
@@ -224,8 +257,9 @@ export class FileUploadComponent {
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                height: 100%;
+                flex: 1;
                 min-height: 70px;
+                box-sizing: border-box;
             }
 
             .drop-zone.drag-over {

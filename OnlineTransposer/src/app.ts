@@ -53,10 +53,24 @@ export class App {
      * Create application layout
      */
     private createLayout(): void {
-        // Create header (3 columns: task selector, upload buttons, drop zone)
+        // Create header (4 columns: instructions, task selector, upload buttons, drop zone)
         const header = document.createElement('div');
         header.className = 'app-header';
         header.id = 'app-header';
+
+        // Create instructions container
+        const instructionsContainer = document.createElement('div');
+        instructionsContainer.id = 'instructions-container';
+        instructionsContainer.className = 'instructions-container';
+        instructionsContainer.innerHTML = `
+            <div class="instructions-content">
+                <strong>Instructions:</strong><br>
+                1. Load a task<br>
+                2. Search for your location<br>
+                3. Click & rotate to position<br>
+                4. Export to download files
+            </div>
+        `;
 
         const taskSelectorContainer = document.createElement('div');
         taskSelectorContainer.id = 'task-selector-container';
@@ -70,6 +84,7 @@ export class App {
         dropZoneContainer.id = 'drop-zone-container';
         dropZoneContainer.className = 'drop-zone-container';
 
+        header.appendChild(instructionsContainer);
         header.appendChild(taskSelectorContainer);
         header.appendChild(uploadContainer);
         header.appendChild(dropZoneContainer);
@@ -333,11 +348,26 @@ export class App {
 
             .app-header {
                 display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-columns: 1fr 1fr 1fr 1fr;
                 gap: 10px;
                 padding: 8px;
                 background: #f8f9fa;
                 border-radius: 8px;
+                align-items: start;
+            }
+
+            .instructions-container {
+                min-width: 0;
+            }
+
+            .instructions-content {
+                background: white;
+                border: 2px solid #007bff;
+                border-radius: 6px;
+                padding: 10px 12px;
+                font-size: 13px;
+                line-height: 1.5;
+                color: #333;
             }
 
             .task-selector-container {
