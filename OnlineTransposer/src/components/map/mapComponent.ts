@@ -10,6 +10,9 @@ import TaskService from '../../services/taskService';
 import { calculateBearing } from '../../utils/coordinateUtils';
 import { calculateOptimizedTaskLine } from '../../utils/waypointOptimizer';
 
+// Import map component styles
+import './mapComponent.css';
+
 
 interface MapOptions {
     center?: [number, number];
@@ -20,6 +23,161 @@ interface MapOptions {
 
 interface CustomMarkerOptions extends L.MarkerOptions {
     originalPosition?: L.LatLng;
+}
+
+/**
+ * Location search control for Leaflet
+ */
+class LocationSearchControl extends L.Control {
+    private searchInput?: HTMLInputElement;
+    private searchButton?: HTMLButtonElement;
+    private resultsContainer?: HTMLDivElement;
+    private searchTimeout?: number;
+
+    constructor(options?: L.ControlOptions) {
+        super(options);
+    }
+
+    onAdd(map: L.Map): HTMLElement {
+        const container = L.DomUtil.create('div', 'leaflet-control-search');
+
+        // Prevent map click events from propagating
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.disableScrollPropagation(container);
+
+        // Create search input
+        this.searchInput = L.DomUtil.create('input', '', container) as HTMLInputElement;
+        this.searchInput.type = 'text';
+        this.searchInput.placeholder = 'Search location...';
+
+        // Create search button
+        this.searchButton = L.DomUtil.create('button', '', container) as HTMLButtonElement;
+        this.searchButton.textContent = 'Go';
+        this.searchButton.type = 'button';
+
+        // Create results dropdown
+        this.resultsContainer = L.DomUtil.create('div', 'search-results', container);
+
+        // Set up event listeners
+        this.setupEventListeners(map);
+
+        return container;
+    }
+
+    private setupEventListeners(map: L.Map): void {
+        if (!this.searchInput || !this.searchButton || !this.resultsContainer) return;
+
+        let searchAbortController: AbortController | null = null;
+
+        const performSearch = async (query: string) => {
+            if (!query.trim()) {
+                this.resultsContainer?.classList.remove('active');
+                return;
+            }
+
+            // Cancel any pending search
+            if (searchAbortController) {
+                searchAbortController.abort();
+            }
+
+            // Create new abort controller for this search
+            searchAbortController = new AbortController();
+
+            // Add loading state
+            const container = this.getResultContainer();
+            container?.classList.add('search-loading');
+            container?.classList.remove('search-error');
+
+            try {
+                const results = await this.searchLocation(query, searchAbortController.signal);
+                this.displayResults(results, map);
+            } catch (error) {
+                if ((error as Error).name !== 'AbortError') {
+                    console.error('Search failed:', error);
+                    container?.classList.add('search-error');
+                }
+            } finally {
+                container?.classList.remove('search-loading');
+                searchAbortController = null;
+            }
+        };
+
+        // Input event with debounce
+        let debounceTimeout: number;
+        this.searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = window.setTimeout(() => {
+                performSearch(this.searchInput!.value);
+            }, 300);
+        });
+
+        // Button click
+        this.searchButton.addEventListener('click', () => {
+            performSearch(this.searchInput!.value);
+        });
+
+        // Enter key
+        this.searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch(this.searchInput!.value);
+            }
+        });
+
+        // Close results when clicking on the map (not other controls)
+        const mapContainer = map.getContainer();
+        mapContainer.addEventListener('click', (e) => {
+            if (!this.getResultContainer()?.contains(e.target as Node)) {
+                this.resultsContainer?.classList.remove('active');
+            }
+        });
+    }
+
+    private getResultContainer(): HTMLElement | null {
+        return this.searchInput?.closest('.leaflet-control-search') as HTMLElement || null;
+    }
+
+    private async searchLocation(query: string, signal: AbortSignal): Promise<Array<{name: string, display_name: string, lat: number, lon: number}>> {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+            { signal }
+        );
+
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+
+        return await response.json();
+    }
+
+    private displayResults(results: Array<{name: string, display_name: string, lat: number, lon: number}>, map: L.Map): void {
+        if (!this.resultsContainer) return;
+
+        this.resultsContainer.innerHTML = '';
+
+        if (results.length === 0) {
+            this.resultsContainer.classList.remove('active');
+            return;
+        }
+
+        results.forEach(result => {
+            const item = L.DomUtil.create('div', 'search-result-item', this.resultsContainer!);
+            item.innerHTML = `
+                <div class="result-name">${result.name}</div>
+                <div class="result-details">${result.display_name}</div>
+            `;
+
+            L.DomEvent.on(item, 'click', () => {
+                map.setView([result.lat, result.lon], 13);
+                this.resultsContainer?.classList.remove('active');
+                if (this.searchInput) {
+                    this.searchInput.value = result.display_name;
+                }
+            });
+        });
+
+        this.resultsContainer.classList.add('active');
+    }
 }
 
 export class MapComponent {
@@ -37,6 +195,8 @@ export class MapComponent {
     private clickMoveTimeout?: number;
     private singleClickTimeout?: number;
     private pendingClickLocation?: L.LatLng;
+    private warningControl?: L.Control;
+    private warningTimeout?: number;
 
     constructor(containerId: string, options: MapOptions = {}) {
         const defaultOptions: MapOptions = {
@@ -68,13 +228,13 @@ export class MapComponent {
         // Add OpenStreetMap base layer
         this.baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
-        }).addTo(this.map);
+        });
 
-        // Add OpenTopoMap terrain layer
+        // Add OpenTopoMap terrain layer (set as default)
         this.terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenTopoMap contributors',
             maxZoom: 17
-        });
+        }).addTo(this.map);
 
         // Create layers for task and airspace
         this.taskLayer = L.layerGroup().addTo(this.map);
@@ -99,6 +259,9 @@ export class MapComponent {
             imperial: false,
             metric: true
         }).addTo(this.map);
+
+        // Add location search control
+        new LocationSearchControl({ position: 'topleft' }).addTo(this.map);
     }
 
     /**
@@ -112,7 +275,11 @@ export class MapComponent {
                 return;
             }
 
-            if (!this.currentTask || !this.dragMarker) return;
+            // Show warning if no task is loaded
+            if (!this.currentTask || !this.dragMarker) {
+                this.showWarning('Please load a task first, then left-click to position it');
+                return;
+            }
 
             const clickedLat = e.latlng.lat;
             const clickedLon = e.latlng.lng;
@@ -531,9 +698,55 @@ export class MapComponent {
     }
 
     /**
+     * Show a temporary warning message on the map
+     */
+    private showWarning(message: string): void {
+        // Clear any existing warning timeout
+        if (this.warningTimeout) {
+            clearTimeout(this.warningTimeout);
+        }
+
+        // Remove existing warning control if present
+        if (this.warningControl) {
+            this.map.removeControl(this.warningControl);
+        }
+
+        // Create warning control
+        const WarningControl = L.Control.extend({
+            onAdd: (map: L.Map) => {
+                const container = L.DomUtil.create('div', 'map-warning-message');
+                container.innerHTML = `
+                    <div class="warning-content">
+                        <span class="warning-icon">⚠️</span>
+                        <span class="warning-text">${message}</span>
+                    </div>
+                `;
+                return container;
+            }
+        });
+
+        this.warningControl = new WarningControl({ position: 'bottomleft' } as any);
+        this.warningControl.addTo(this.map);
+
+        // Auto-hide after 4 seconds
+        this.warningTimeout = window.setTimeout(() => {
+            if (this.warningControl) {
+                this.map.removeControl(this.warningControl);
+                this.warningControl = undefined;
+            }
+            this.warningTimeout = undefined;
+        }, 4000);
+    }
+
+    /**
      * Clean up map resources
      */
     public destroy(): void {
+        // Clear warning timeout
+        if (this.warningTimeout) {
+            clearTimeout(this.warningTimeout);
+        }
+
         if (this.map) {
             this.map.remove();
         }

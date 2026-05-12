@@ -1,0 +1,138 @@
+/**
+ * Map component custom styles
+ */
+
+/* Location search control */
+.leaflet-control-search {
+    background: white;
+    padding: 5px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.leaflet-control-search input {
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 5px 10px;
+    font-size: 14px;
+    width: 200px;
+    outline: none;
+}
+
+.leaflet-control-search input:focus {
+    border-color: #4CAF50;
+}
+
+.leaflet-control-search button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 5px;
+}
+
+.leaflet-control-search button:hover {
+    background: #45a049;
+}
+
+.leaflet-control-search button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Search results dropdown */
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: none;
+}
+
+.search-results.active {
+    display: block;
+}
+
+.search-result-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: #f5f5f5;
+}
+
+.search-result-item .result-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.search-result-item .result-details {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* Search loading state */
+.leaflet-control-search.search-loading input {
+    background: #f9f9f9 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="%234CAF50" stroke-width="2" opacity="0.3"/><path d="M10 2a8 8 0 0 1 0 16" fill="none" stroke="%234CAF50" stroke-width="2"><animateTransform attributeName="transform" type="rotate" from="0 10 10" to="360 10 10" dur="1s" repeatCount="indefinite"/></path></svg>') no-repeat right 5px center;
+}
+
+/* Search error state */
+.leaflet-control-search.search-error input {
+    border-color: #f44336;
+}
+
+/* Warning message overlay */
+.map-warning-message {
+    background: rgba(255, 243, 224, 0.95);
+    border: 2px solid #ff9800;
+    border-radius: 8px;
+    padding: 15px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideUp 0.3s ease-out;
+    z-index: 2000;
+}
+
+.map-warning-message .warning-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.map-warning-message .warning-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.map-warning-message .warning-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e65100;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
