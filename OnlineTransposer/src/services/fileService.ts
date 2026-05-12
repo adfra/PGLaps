@@ -17,6 +17,7 @@ import {
     generateXCTaskFile,
     generateOpenAirFile
 } from '../utils/fileUtils';
+import { generateSuggestedFilenames } from '../utils/filenameGenerator';
 
 const ACCEPTED_TASK_TYPES = ['.xctsk'];
 const ACCEPTED_AIRSPACE_TYPES = ['.txt'];
@@ -27,6 +28,14 @@ export interface IFileService {
   parseAirspaceFile(file: File): Promise<Airspace[]>;
   downloadTaskFile(task: XCTask, filename: string): void;
   downloadAirspaceFile(airspaces: Airspace[], filename: string): void;
+  exportTransformedFiles(
+    task: XCTask,
+    originalFilename: string,
+    deploymentLat: number,
+    deploymentLon: number,
+    airspaces?: Airspace[],
+    searchLocationName?: string
+  ): Promise<void>;
   validateFiles(files: { task?: File; airspace?: File }): boolean;
 }
 
@@ -135,19 +144,28 @@ export class FileService implements IFileService{
     /**
      * Export transformed files
      */
-    public exportTransformedFiles(
+    public async exportTransformedFiles(
         task: XCTask,
+        originalFilename: string,
+        deploymentLat: number,
+        deploymentLon: number,
         airspaces?: Airspace[],
-        baseFilename: string = 'transformed'
-    ): void {
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:]/g, '-');
-        
+        searchLocationName?: string
+    ): Promise<void> {
+        // Generate suggested filenames based on original filename and deployment location
+        const filenames = await generateSuggestedFilenames(
+            originalFilename,
+            deploymentLat,
+            deploymentLon,
+            searchLocationName
+        );
+
         // Export task
-        this.downloadTaskFile(task, `${baseFilename}_task_${timestamp}.xctsk`);
+        this.downloadTaskFile(task, filenames.taskFilename);
 
         // Export airspaces if present
         if (airspaces && airspaces.length > 0) {
-            this.downloadAirspaceFile(airspaces, `${baseFilename}_airspace_${timestamp}.txt`);
+            this.downloadAirspaceFile(airspaces, filenames.airspaceFilename);
         }
     }
 

@@ -23,6 +23,8 @@ export class App {
     private originalAirspace?: Airspace[];
     private originalTaskStart?: { lat: number; lon: number };
     private originalTaskBearing?: number;
+    private originalTaskFilename?: string;
+    private searchLocation?: { lat: number; lon: number; name: string };
     private container: HTMLElement;
     private rotationControl: HTMLInputElement;
     private departureAngleDisplay: HTMLInputElement;
@@ -139,19 +141,20 @@ export class App {
         // Initialize map
         this.map = new MapComponent('map-container', {
             center: [-36.74671, 146.97747], // Default to Bright, Australia
-            zoom: 13
+            zoom: 13,
+            onLocationSelected: (lat, lon, name) => this.handleLocationSelected(lat, lon, name)
         });
 
         // Initialize task selector
         this.taskSelector = new TaskSelectorComponent('task-selector-container', {
-            onTaskLoaded: (task) => this.handleTaskLoaded(task),
+            onTaskLoaded: (task, filename) => this.handleTaskLoaded(task, filename),
             onAirspaceLoaded: (airspace) => this.handleAirspaceLoaded(airspace),
             onError: (error) => this.handleError(error)
         });
 
         // Initialize file upload (buttons only, drop zone separate)
         this.fileUpload = new FileUploadComponent('upload-container', {
-            onTaskLoaded: (task) => this.handleTaskLoaded(task),
+            onTaskLoaded: (task, filename) => this.handleTaskLoaded(task, filename),
             onAirspaceLoaded: (airspace) => this.handleAirspaceLoaded(airspace),
             onError: (error) => this.handleError(error)
         }, 'drop-zone-container');
@@ -163,8 +166,9 @@ export class App {
     /**
      * Handle task file loading
      */
-    private handleTaskLoaded(task: XCTask): void {
+    private handleTaskLoaded(task: XCTask, filename?: string): void {
         this.currentTask = task;
+        this.originalTaskFilename = filename; // Store original filename
 
         // Store original task state for transformations
         this.originalTaskStart = {
@@ -294,19 +298,38 @@ export class App {
     }
 
     /**
+     * Handle location selection from search
+     */
+    private handleLocationSelected(lat: number, lon: number, name: string): void {
+        this.searchLocation = { lat, lon, name };
+    }
+
+    /**
      * Handle file export
      */
-    private handleExport(): void {
+    private async handleExport(): Promise<void> {
         if (!this.currentTask) {
             this.showNotification('No task to export', 'error');
             return;
         }
 
-      try {
-            
-            this.fileService.exportTransformedFiles(
+        if (!this.originalTaskFilename) {
+            this.showNotification('Original task filename not available', 'error');
+            return;
+        }
+
+        try {
+            // Get deployment location (first waypoint of current task)
+            const deploymentLat = this.currentTask.turnpoints[0].waypoint.lat;
+            const deploymentLon = this.currentTask.turnpoints[0].waypoint.lon;
+
+            await this.fileService.exportTransformedFiles(
                 this.currentTask,
-                this.currentAirspace
+                this.originalTaskFilename,
+                deploymentLat,
+                deploymentLon,
+                this.currentAirspace,
+                this.searchLocation?.name
             );
             this.showNotification('Files exported successfully');
         } catch (error) {

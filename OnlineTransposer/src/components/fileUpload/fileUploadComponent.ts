@@ -8,7 +8,7 @@ import { XCTask } from '../../types/taskTypes';
 import { Airspace } from '../../types/airspaceTypes';
 
 interface UploadCallbacks {
-    onTaskLoaded: (task: XCTask) => void;
+    onTaskLoaded: (task: XCTask, filename?: string) => void;
     onAirspaceLoaded: (airspace: Airspace[]) => void;
     onError?: (error: Error) => void;
     onProgress?: (percent: number) => void;
@@ -173,7 +173,7 @@ export class FileUploadComponent {
         try {
             if (file.name.toLowerCase().endsWith('.xctsk')) {
                 const task = await this.fileService.parseTaskFile(file);
-                this.callbacks.onTaskLoaded(task);
+                this.callbacks.onTaskLoaded(task, file.name);
             } else if (file.name.toLowerCase().endsWith('.txt')) {
                 const airspace = await this.fileService.parseAirspaceFile(file);
                 this.callbacks.onAirspaceLoaded(airspace);

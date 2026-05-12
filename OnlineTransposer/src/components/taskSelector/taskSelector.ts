@@ -20,7 +20,7 @@ interface TaskTemplatesResponse {
 }
 
 interface SelectorCallbacks {
-    onTaskLoaded: (task: XCTask) => void;
+    onTaskLoaded: (task: XCTask, filename?: string) => void;
     onAirspaceLoaded: (airspace: Airspace[]) => void;
     onError?: (error: Error) => void;
 }
@@ -195,7 +195,10 @@ export class TaskSelectorComponent {
             const taskBlob = await taskResponse.blob();
             const taskFile = new File([taskBlob], 'task.xctsk', { type: 'application/octet-stream' });
             const parsedTask = await this.fileService.parseTaskFile(taskFile);
-            this.callbacks.onTaskLoaded(parsedTask);
+
+            // Construct filename from task info
+            const filename = `PGLaps_${task.id}_${task.name}.xctsk`;
+            this.callbacks.onTaskLoaded(parsedTask, filename);
 
             // Load airspace file if URL is provided
             if (task.airspaceUrl) {

@@ -19,6 +19,7 @@ interface MapOptions {
     zoom?: number;
     minZoom?: number;
     maxZoom?: number;
+    onLocationSelected?: (lat: number, lon: number, name: string) => void;
 }
 
 interface CustomMarkerOptions extends L.MarkerOptions {
@@ -33,9 +34,11 @@ class LocationSearchControl extends L.Control {
     private searchButton?: HTMLButtonElement;
     private resultsContainer?: HTMLDivElement;
     private searchTimeout?: number;
+    private onLocationSelected?: (lat: number, lon: number, name: string) => void;
 
-    constructor(options?: L.ControlOptions) {
+    constructor(options?: L.ControlOptions, onLocationSelected?: (lat: number, lon: number, name: string) => void) {
         super(options);
+        this.onLocationSelected = onLocationSelected;
     }
 
     onAdd(map: L.Map): HTMLElement {
@@ -173,6 +176,10 @@ class LocationSearchControl extends L.Control {
                 if (this.searchInput) {
                     this.searchInput.value = result.display_name;
                 }
+                // Notify app of search location selection
+                if (this.onLocationSelected) {
+                    this.onLocationSelected(result.lat, result.lon, result.display_name);
+                }
             });
         });
 
@@ -190,6 +197,7 @@ export class MapComponent {
     private originalTask?: XCTask;
     private dragMarker?: L.Marker;
     private onTaskUpdate?: (task: XCTask) => void;
+    private onLocationSelected?: (lat: number, lon: number, name: string) => void;
     private currentRotation: number = 0;
     private originalTaskBearing?: number;
     private clickMoveTimeout?: number;
@@ -207,6 +215,7 @@ export class MapComponent {
         };
 
         const mapOptions = { ...defaultOptions, ...options };
+        this.onLocationSelected = mapOptions.onLocationSelected;
 
         // Initialize map
         this.map = L.map(containerId, {
@@ -261,7 +270,7 @@ export class MapComponent {
         }).addTo(this.map);
 
         // Add location search control
-        new LocationSearchControl({ position: 'topleft' }).addTo(this.map);
+        new LocationSearchControl({ position: 'topleft' }, this.onLocationSelected).addTo(this.map);
     }
 
     /**
